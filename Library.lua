@@ -41,23 +41,17 @@ if getgenv().library then
     pcall(function() getgenv().library:unload() end)
 end
 
-getgenv().library = {
+local library = {
 	flags = {},
 	config_flags = {},
 	connections = {},
 	notifications = {},
 	instances = {},
 	main_frame = {},
-	config_holder,
-	current_tab,
 	first_tab_set = false,
-	current_element_open,
 	open_menus = {},
 	open_keybind_menus = {},
-	dock_button_holder,
-	gui,
 	sin = 0,
-	keybind_path,
 	panel_open = false,
 
 	directory = "euphoria",
@@ -65,9 +59,10 @@ getgenv().library = {
 		"/fonts",
 		CONFIG_FOLDER,
 	},
-	font,
 	config_folder = CONFIG_FOLDER,
 }
+
+getgenv().library = library
 
 local flags = library.flags
 local config_flags = library.config_flags
@@ -160,7 +155,6 @@ local keys = {
 	[Enum.KeyCode.Slash] = "/",
 	[Enum.KeyCode.Asterisk] = "*",
 	[Enum.KeyCode.Plus] = "+",
-	[Enum.KeyCode.Period] = ".",
 	[Enum.KeyCode.Backquote] = "`",
 	[Enum.UserInputType.MouseButton1] = "MB1",
 	[Enum.UserInputType.MouseButton2] = "MB2",
@@ -171,8 +165,14 @@ local keys = {
 
 library.__index = library
 
+pcall(function()
+	makefolder(library.directory)
+end)
+
 for _, path in next, library.folders do
-	makefolder(library.directory .. path)
+	pcall(function()
+		makefolder(library.directory .. path)
+	end)
 end
 
 do
@@ -208,14 +208,19 @@ end
 
 function library:unload()
 	library.__unloaded = true
-	library.gui:Destroy()
+
+	if library.gui then
+		library.gui:Destroy()
+	end
 
 	for _, connection in library.connections do
 		connection:Disconnect()
 	end
 
 	for _, item in library.instances do
-		item:Destroy()
+		pcall(function()
+			item:Destroy()
+		end)
 	end
 
 	getgenv().library = nil
@@ -414,14 +419,6 @@ function library:update_theme(theme, color)
 	themes.preset[theme] = color
 end
 
-function library:connection(signal, callback)
-	local connection = signal:Connect(callback)
-
-	table.insert(library.connections, connection)
-
-	return connection
-end
-
 function library:create(instance, options)
 	local ins = Instance.new(instance)
 
@@ -482,21 +479,36 @@ function library:make_draggable(frame)
 end
 
 do
-	local parent = coregui
-	pcall(function()
-		if typeof(gethui) == "function" then
-			parent = gethui()
-		end
-	end)
-	library.gui = library:create("ScreenGui", {
+	local gui = library:create("ScreenGui", {
 		Enabled = true,
-		Parent = parent,
 		Name = "",
 		DisplayOrder = 2,
-		ZIndexBehavior = 1,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		ResetOnSpawn = false,
 	})
-end
 
+	local parented = false
+
+	pcall(function()
+		if typeof(gethui) == "function" then
+			gui.Parent = gethui()
+			parented = gui.Parent ~= nil
+		end
+	end)
+
+	if not parented then
+		pcall(function()
+			gui.Parent = coregui
+			parented = gui.Parent ~= nil
+		end)
+	end
+
+	if not parented then
+		gui.Parent = lp:WaitForChild("PlayerGui")
+	end
+
+	library.gui = gui
+end
 
 function library:watermark(properties)
 	local cfg = {
@@ -960,6 +972,16 @@ function library:window(properties)
 		BackgroundColor3 = Color3.fromRGB(38, 38, 38),
 	})
 
+	local hrp_out = library:create("Frame", {
+		Parent = hitpart,
+		Name = "",
+		Position = UDim2.new(0.5, -10, 0, 99),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		Size = UDim2.new(0, 20, 0, 20),
+		BorderSizePixel = 0,
+		BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+	})
+
 	local hrp = library:create("Frame", {
 		Parent = hrp_out,
 		Name = "",
@@ -1226,12 +1248,6 @@ function library:window(properties)
 		}),
 	})
 
-	local UIStroke = library:create("UIStroke", {
-		Parent = distance,
-		Name = "",
-		LineJoinMode = Enum.LineJoinMode.Miter,
-	})
-
 	local weapon = library:create("TextLabel", {
 		Parent = bottom_holder,
 		Name = "",
@@ -1252,14 +1268,8 @@ function library:window(properties)
 		weapon.Visible = bool
 	end
 
-	local UIStroke = library:create("UIStroke", {
+	library:create("UIStroke", {
 		Parent = weapon,
-		Name = "",
-		LineJoinMode = Enum.LineJoinMode.Miter,
-	})
-
-	local UIStroke = library:create("UIStroke", {
-		Parent = distance,
 		Name = "",
 		LineJoinMode = Enum.LineJoinMode.Miter,
 	})
@@ -1393,7 +1403,7 @@ function library:window(properties)
 		BackgroundColor3 = Color3.fromRGB(26, 255, 0),
 	})
 
-	local UIStroke = library:create("UIStroke", {
+	library:create("UIStroke", {
 		Parent = health_text,
 		Name = "",
 		LineJoinMode = Enum.LineJoinMode.Miter,
@@ -1481,7 +1491,7 @@ function library:window(properties)
 		player_name.Visible = bool
 	end
 
-	local UIStroke = library:create("UIStroke", {
+	library:create("UIStroke", {
 		Parent = player_name,
 		Name = "",
 		LineJoinMode = Enum.LineJoinMode.Miter,
@@ -1873,6 +1883,7 @@ function library:window(properties)
 	})
 
 	button.MouseButton1Click:Connect(function()
+		if not selected_player then return end
 		player_buttons[selected_player.Name].priority.Text = "neutral"
 		player_buttons[selected_player.Name].priority.TextColor3 = rgb(180, 180, 180)
 	end)
@@ -1902,6 +1913,7 @@ function library:window(properties)
 	})
 
 	button.MouseButton1Click:Connect(function()
+		if not selected_player then return end
 		player_buttons[selected_player.Name].priority.Text = "friendly"
 		player_buttons[selected_player.Name].priority.TextColor3 = rgb(15, 179, 255)
 	end)
@@ -1931,6 +1943,7 @@ function library:window(properties)
 	})
 
 	button.MouseButton1Click:Connect(function()
+		if not selected_player then return end
 		player_buttons[selected_player.Name].priority.Text = "enemy"
 		player_buttons[selected_player.Name].priority.TextColor3 = rgb(255, 44, 44)
 	end)
@@ -2137,7 +2150,9 @@ function library:window(properties)
 	end)
 
 	library:connection(players.PlayerRemoving, function(player)
-		player_buttons[player.Name].instance:Destroy()
+		if player_buttons[player.Name] then
+			player_buttons[player.Name].instance:Destroy()
+		end
 	end)
 
 	local old_kblist = library:create("Frame", {
@@ -2503,7 +2518,7 @@ function library:new_keybind(properties)
 		keybind_text.Text = text
 	end
 
-	function keyName(key)
+	local function keyName(key)
 		local text = tostring(key) ~= "Enums" and (keys[key] or tostring(key):gsub("Enum.", "")) or nil
 		local __text = text and (tostring(text):gsub("KeyCode.", ""):gsub("UserInputType.", ""))
 
@@ -2711,7 +2726,10 @@ function library:notification(properties)
 	end)
 
 	task.delay(cfg.time + 0.1, function()
-		table.remove(library.notifications, table.find(library.notifications, holder))
+		local index = table.find(library.notifications, holder)
+		if index then
+			table.remove(library.notifications, index)
+		end
 		cfg:refresh_notifications()
 		task.wait(0.5)
 		holder:Destroy()
@@ -3445,7 +3463,6 @@ function library:hitpart_picker(properties)
 		})
 	end
 
-
 	function cfg.set(parts)
 		flags[cfg.flag] = {}
 		for name, button in pairs(bodyparts) do
@@ -3469,9 +3486,9 @@ function library:hitpart_picker(properties)
 			end
 		end
 
-	if type(cfg.callback) == "function" then
-		pcall(cfg.callback, flags[cfg.flag])
-	end
+		if type(cfg.callback) == "function" then
+			pcall(cfg.callback, flags[cfg.flag])
+		end
 	end
 
 	cfg.hitpart_holder = r15_hitpart_holder
@@ -3939,7 +3956,7 @@ function library:toggle(properties)
 					BackgroundTransparency = 1,
 					Position = UDim2.new(0, -12, 0, -12),
 					Size = UDim2.new(1, 24, 1, 24),
-			ZIndex = 999,
+					ZIndex = 999,
 					BorderSizePixel = 0,
 					SliceCenter = Rect.new(Vector2.new(21, 21), Vector2.new(79, 79)),
 				})
@@ -4075,8 +4092,8 @@ function library:toggle(properties)
 					if not table.find(library.open_menus, hitpart_picker_menu) then
 						table.insert(library.open_menus, hitpart_picker_menu)
 					end
-		else
-			hitpart_picker_menu.Visible = false
+				else
+					hitpart_picker_menu.Visible = false
 				end
 			end
 			
@@ -4110,6 +4127,88 @@ function library:toggle(properties)
 		Padding = UDim.new(0, 3),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 	})
+
+	local icon_inline = library:create("TextButton", {
+		Parent = object,
+		Name = "",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, -15, 0.5, 0),
+		BorderColor3 = Color3.fromRGB(19, 19, 19),
+		Size = UDim2.new(0, 10, 0, 10),
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = false,
+		BackgroundColor3 = Color3.fromRGB(8, 8, 8),
+		ClipsDescendants = false,
+	})
+
+	local icon = library:create("Frame", {
+		Parent = icon_inline,
+		Name = "",
+		Position = UDim2.new(0, 2, 0, 2),
+		BorderColor3 = Color3.fromRGB(56, 56, 56),
+		Size = UDim2.new(1, -4, 1, -4),
+		BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+	})
+
+	local icon_2 = library:create("Frame", {
+		Parent = icon,
+		Name = "",
+		BorderColor3 = Color3.fromRGB(56, 56, 56),
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundColor3 = themes.preset.accent,
+	})
+	library:apply_theme(icon_2, "accent", "BackgroundColor3")
+
+	local glow = library:create("ImageLabel", {
+		Parent = icon_inline,
+		Name = "",
+		Visible = false,
+		ImageColor3 = themes.preset.accent,
+		ScaleType = Enum.ScaleType.Slice,
+		ImageTransparency = 0.75,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		Image = "http://www.roblox.com/asset/?id=18245826428",
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, -12, 0, -12),
+		Size = UDim2.new(1, 24, 1, 24),
+		ZIndex = 999,
+		BorderSizePixel = 0,
+		SliceCenter = Rect.new(Vector2.new(21, 21), Vector2.new(79, 79)),
+	})
+
+	library:apply_theme(glow, "accent", "ImageColor3")
+
+	local bottom_components = library:create("Frame", {
+		Parent = object,
+		Name = "",
+		Visible = true,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		Position = UDim2.new(0, 0, 0, 13),
+		Size = UDim2.new(1, 26, 0, 0),
+		ZIndex = 2,
+		BorderSizePixel = 0,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+	})
+
+	local bottom_list = library:create("UIListLayout", {
+		Parent = bottom_components,
+		Name = "",
+		Padding = UDim.new(0, 4),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	})
+
+	function cfg.set(bool)
+		icon_2.Visible = bool
+		glow.Visible = bool
+
+		flags[cfg.flag] = bool
+
+		if type(cfg.callback) == "function" then
+			pcall(cfg.callback, bool)
+		end
+	end
 
 	local toggle_keybind = nil
 	local toggle_keybind_flag = cfg.flag .. "_keybind"
@@ -4504,88 +4603,6 @@ function library:toggle(properties)
 		end)
 	end
 
-	local icon_inline = library:create("TextButton", {
-		Parent = object,
-		Name = "",
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, -15, 0.5, 0),
-		BorderColor3 = Color3.fromRGB(19, 19, 19),
-		Size = UDim2.new(0, 10, 0, 10),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
-		BackgroundColor3 = Color3.fromRGB(8, 8, 8),
-		ClipsDescendants = false,
-	})
-
-	local icon = library:create("Frame", {
-		Parent = icon_inline,
-		Name = "",
-		Position = UDim2.new(0, 2, 0, 2),
-		BorderColor3 = Color3.fromRGB(56, 56, 56),
-		Size = UDim2.new(1, -4, 1, -4),
-		BackgroundColor3 = Color3.fromRGB(22, 22, 22),
-	})
-
-	local icon_2 = library:create("Frame", {
-		Parent = icon,
-		Name = "",
-		BorderColor3 = Color3.fromRGB(56, 56, 56),
-		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundColor3 = themes.preset.accent,
-	})
-	library:apply_theme(icon_2, "accent", "BackgroundColor3")
-
-	local glow = library:create("ImageLabel", {
-		Parent = icon_inline,
-		Name = "",
-		Visible = false,
-		ImageColor3 = themes.preset.accent,
-		ScaleType = Enum.ScaleType.Slice,
-		ImageTransparency = 0.75,
-		BorderColor3 = Color3.fromRGB(0, 0, 0),
-		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		Image = "http://www.roblox.com/asset/?id=18245826428",
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, -12, 0, -12),
-		Size = UDim2.new(1, 24, 1, 24),
-		ZIndex = 999,
-		BorderSizePixel = 0,
-		SliceCenter = Rect.new(Vector2.new(21, 21), Vector2.new(79, 79)),
-	})
-
-	library:apply_theme(glow, "accent", "ImageColor3")
-
-	local bottom_components = library:create("Frame", {
-		Parent = object,
-		Name = "",
-		Visible = true,
-		BorderColor3 = Color3.fromRGB(0, 0, 0),
-		Position = UDim2.new(0, 0, 0, 13),
-		Size = UDim2.new(1, 26, 0, 0),
-		ZIndex = 2,
-		BorderSizePixel = 0,
-		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-	})
-
-	local list = library:create("UIListLayout", {
-		Parent = bottom_components,
-		Name = "",
-		Padding = UDim.new(0, 4),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-	})
-
-	function cfg.set(bool)
-		icon_2.Visible = bool
-		glow.Visible = bool
-
-		flags[cfg.flag] = bool
-
-		if type(cfg.callback) == "function" then
-			pcall(cfg.callback, bool)
-		end
-	end
-
 	library:connection(object.MouseButton1Click, function()
 		cfg.enabled = not cfg.enabled
 
@@ -4599,12 +4616,12 @@ function library:toggle(properties)
 	end)
 
 	cfg.set(cfg.default)
+	cfg.enabled = cfg.default
 
-	self.previous_holder = left_components
 	self.bottom_holder = bottom_components
 	self.right_holder = right_components
 
-	cfg.holder = left_components
+	cfg.holder = nil
 	cfg.right_holder = right_components
 	cfg.bottom_holder = bottom_components
 
@@ -4632,6 +4649,7 @@ function library:slider(properties)
 	}
 
 	local bottom_components
+	local object
 	if cfg.name then
 		object = library:create("TextLabel", {
 			Parent = self.holder,
@@ -5173,7 +5191,6 @@ function library:colorpicker(properties)
 		alpha = properties.alpha or 1,
 		callback = properties.callback or function() end,
 		animation = "normal",
-		saved_color,
 		right_holder = self.right_holder or nil,
 		holder = self.holder or nil,
 	}
@@ -5184,7 +5201,7 @@ function library:colorpicker(properties)
 	local dragging_hue = false
 	local dragging_alpha = false
 
-		local h, s, v = cfg.color:ToHSV()
+	local h, s, v = cfg.color:ToHSV()
 	local a = cfg.alpha
 
 	local right_components
@@ -5216,12 +5233,12 @@ function library:colorpicker(properties)
 			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 		})
 
-	local list = library:create("UIListLayout", {
+		local list = library:create("UIListLayout", {
 			Parent = right_components,
 			Name = "",
 			FillDirection = Enum.FillDirection.Horizontal,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
-		VerticalAlignment = Enum.VerticalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
 			Padding = UDim.new(0, 3),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		})
@@ -5729,7 +5746,7 @@ function library:colorpicker(properties)
 		if color then
 			h, s, v = color:ToHSV()
 		else
-			cfg.saved_color = hsv(s, s, v)
+			cfg.saved_color = hsv(h, s, v)
 		end
 
 		if alpha then
@@ -5742,7 +5759,6 @@ function library:colorpicker(properties)
 			return
 		end
 
-		local hsv_position = Color3.fromHSV(h, s, v)
 		local Color = Color3.fromHSV(h, s, v)
 
 		local value = h
@@ -5757,7 +5773,7 @@ function library:colorpicker(properties)
 
 		local RGB_Format = visual.BackgroundColor3
 
-		icon_inline.BackgroundColor3 = Color3.fromRGB(RGB_Format.R / 4, RGB_Format.G / 4, RGB_Format.B / 4)
+		icon_inline.BackgroundColor3 = Color3.fromRGB(RGB_Format.R * 255 / 4, RGB_Format.G * 255 / 4, RGB_Format.B * 255 / 4)
 		icon.BorderColor3 = Color3.fromRGB(
 			math.floor((Color.R * 255) + 0.5) / 2,
 			math.floor((Color.G * 255) + 0.5) / 2,
@@ -5786,11 +5802,14 @@ function library:colorpicker(properties)
 		cfg.color = Color
 		cfg.alpha = a
 
+		local current_animation = flags[cfg.flag] and flags[cfg.flag]["animation"] or "normal"
+
 		flags[cfg.flag] = {
 			Color = Color,
 			Transparency = a,
+			animation = current_animation,
 		}
-		cfg.saved_color = hsv(s, s, v)
+		cfg.saved_color = hsv(h, s, v)
 
 		if type(cfg.callback) == "function" then
 			pcall(cfg.callback, Color, a)
@@ -5852,34 +5871,34 @@ function library:colorpicker(properties)
 
 	rainbow.MouseButton1Down:Connect(function()
 		selected.BackgroundTransparency = 1
-		selected = "rainbow"
+		selected = rainbow
 		rainbow.BackgroundTransparency = 0
 
 		flags[cfg.flag]["animation"] = "rainbow"
-		cfg.saved_color = hsv(s, s, v)
+		cfg.saved_color = hsv(h, s, v)
 	end)
 
 	fade_alpha.MouseButton1Down:Connect(function()
 		selected.BackgroundTransparency = 1
-		selected = "fade_alpha"
+		selected = fade_alpha
 		fade_alpha.BackgroundTransparency = 0
 
 		flags[cfg.flag]["animation"] = "fade_alpha"
-		cfg.saved_color = hsv(s, s, v)
+		cfg.saved_color = hsv(h, s, v)
 	end)
 
 	fade.MouseButton1Down:Connect(function()
 		selected.BackgroundTransparency = 1
-		selected = "fade"
+		selected = fade
 		fade.BackgroundTransparency = 0
 
 		flags[cfg.flag]["animation"] = "fade"
-		cfg.saved_color = hsv(s, s, v)
+		cfg.saved_color = hsv(h, s, v)
 	end)
 
 	normal.MouseButton1Down:Connect(function()
 		selected.BackgroundTransparency = 1
-		selected = "normal"
+		selected = normal
 		normal.BackgroundTransparency = 0
 
 		flags[cfg.flag]["animation"] = "normal"
@@ -5905,8 +5924,6 @@ function library:colorpicker(properties)
 
 	cfg.set(cfg.color, cfg.alpha)
 
-	self.previous_holder = parent
-
 	library.config_flags[cfg.flag] = cfg.set
 
 	return setmetatable(cfg, library)
@@ -5926,6 +5943,8 @@ function library:keybind(properties)
 		display = properties.displayName or properties.display or properties.name or nil,
 		hold_instances = {},
 	}
+
+	local toggled = false
 
 	flags[cfg.flag] = {}
 
@@ -6125,24 +6144,6 @@ function library:keybind(properties)
 		end
 	end
 
-	function cfg.set_mode(mode)
-		cfg.mode = mode
-
-		if mode == "always" then
-			cfg.set(true)
-		elseif mode == "hold" then
-			cfg.set(false)
-		end
-
-		flags[cfg.flag] = {
-			mode = cfg.mode,
-			key = cfg.key,
-			active = cfg.active,
-		}
-
-		flags[cfg.flag]["mode"] = mode
-	end
-
 	function cfg.set(input)
 		if type(input) == "boolean" then
 			local __cached = input
@@ -6223,7 +6224,7 @@ function library:keybind(properties)
 			local text = tostring(cfg.key) ~= "Enums" and (keys[cfg.key] or tostring(cfg.key):gsub("Enum.", "")) or nil
 			local __text = text and (tostring(text):gsub("KeyCode.", ""):gsub("UserInputType.", ""))
 
-			keybind.Text = "[" .. string.lower(__text) .. "]" or "..."
+			keybind.Text = "[" .. string.lower(__text or "...") .. "]"
 			cfg.key_name = __text
 		end
 
@@ -6231,6 +6232,24 @@ function library:keybind(properties)
 			key.change_text(keybind.Text .. " " .. cfg.keybind_name .. " (" .. flags[cfg.flag].mode .. ")")
 			key.set_visible(cfg.active)
 		end
+	end
+
+	function cfg.set_mode(mode)
+		cfg.mode = mode
+
+		if mode == "always" then
+			cfg.set(true)
+		elseif mode == "hold" then
+			cfg.set(false)
+		end
+
+		flags[cfg.flag] = {
+			mode = cfg.mode,
+			key = cfg.key,
+			active = cfg.active,
+		}
+
+		flags[cfg.flag]["mode"] = mode
 	end
 
 	local selected
@@ -6382,8 +6401,6 @@ function library:keybind(properties)
 				cfg.binding = nil
 			end
 		end)
-		
-		cfg.binding = binding_connection
 	end)
 
 	library:connection(uis.InputBegan, function(input, game_event)
@@ -6526,9 +6543,9 @@ function library:textbox(properties)
 	function cfg.set(text)
 		flags[cfg.flag] = text
 		textbox.Text = text
-	if type(cfg.callback) == "function" then
-		pcall(cfg.callback, text)
-	end
+		if type(cfg.callback) == "function" then
+			pcall(cfg.callback, text)
+		end
 	end
 
 	if cfg.default then
@@ -6866,19 +6883,21 @@ do
 		end
 	end
 
-	for _, d in next, library.gui:GetDescendants() do
-		recolor(d)
-		animate(d)
-	end
+	if library.gui then
+		for _, d in next, library.gui:GetDescendants() do
+			recolor(d)
+			animate(d)
+		end
 
-	library:connection(library.gui.DescendantAdded, function(d)
-		task.defer(function()
-			if d.Parent then
-				recolor(d)
-				animate(d)
-			end
+		library:connection(library.gui.DescendantAdded, function(d)
+			task.defer(function()
+				if d.Parent then
+					recolor(d)
+					animate(d)
+				end
+			end)
 		end)
-	end)
+	end
 
 	local orig_window = library.window
 
@@ -6947,14 +6966,16 @@ do
 			holder.ChildAdded:Connect(tab_fx)
 		end
 
-		for _, d in next, library.gui:GetDescendants() do
-			if d:IsA("TextLabel") and d.Text == "menu" and d.Parent then
-				d.Text = ""
-				make_icon(d.Parent, {
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.new(0.5, 0, 0.5, 0),
-					Size = UDim2.new(0, 24, 0, 24),
-				})
+		if library.gui then
+			for _, d in next, library.gui:GetDescendants() do
+				if d:IsA("TextLabel") and d.Text == "menu" and d.Parent then
+					d.Text = ""
+					make_icon(d.Parent, {
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0.5, 0, 0.5, 0),
+						Size = UDim2.new(0, 24, 0, 24),
+					})
+				end
 			end
 		end
 
