@@ -23,16 +23,16 @@ local Options = {};
 getgenv().Toggles = Toggles;
 getgenv().Options = Options;
 
-local Library = {
+local Jqz = {
     Registry = {};
     RegistryMap = {};
 
     HudRegistry = {};
 
-    FontColor = Color3.fromRGB(255, 255, 255);
+    FontColor = Color3.fromRGB(205, 205, 205);
     MainColor = Color3.fromRGB(28, 28, 28);
     BackgroundColor = Color3.fromRGB(20, 20, 20);
-    AccentColor = Color3.fromRGB(0, 85, 255);
+    AccentColor = Color3.fromRGB(255, 255, 255);
     OutlineColor = Color3.fromRGB(50, 50, 50);
     RiskColor = Color3.fromRGB(255, 50, 50),
 
@@ -49,7 +49,7 @@ local Library = {
 local RainbowStep = 0
 local Hue = 0
 
-table.insert(Library.Signals, RenderStepped:Connect(function(Delta)
+table.insert(Jqz.Signals, RenderStepped:Connect(function(Delta)
     RainbowStep = RainbowStep + Delta
 
     if RainbowStep >= (1 / 60) then
@@ -61,8 +61,8 @@ table.insert(Library.Signals, RenderStepped:Connect(function(Delta)
             Hue = 0;
         end;
 
-        Library.CurrentRainbowHue = Hue;
-        Library.CurrentRainbowColor = Color3.fromHSV(Hue, 0.8, 1);
+        Jqz.CurrentRainbowHue = Hue;
+        Jqz.CurrentRainbowColor = Color3.fromHSV(Hue, 0.8, 1);
     end
 end))
 
@@ -86,16 +86,16 @@ local function GetTeamsString()
     end;
 
     table.sort(TeamList, function(str1, str2) return str1 < str2 end);
-    
+
     return TeamList;
 end;
 
-function Library:SafeCallback(f, ...)
+function Jqz:SafeCallback(f, ...)
     if (not f) then
         return;
     end;
 
-    if not Library.NotifyOnError then
+    if not Jqz.NotifyOnError then
         return f(...);
     end;
 
@@ -105,20 +105,20 @@ function Library:SafeCallback(f, ...)
         local _, i = event:find(":%d+: ");
 
         if not i then
-            return Library:Notify(event);
+            return Jqz:Notify(event);
         end;
 
-        return Library:Notify(event:sub(i + 1), 3);
+        return Jqz:Notify(event:sub(i + 1), 3);
     end;
 end;
 
-function Library:AttemptSave()
-    if Library.SaveManager then
-        Library.SaveManager:Save();
+function Jqz:AttemptSave()
+    if Jqz.SaveManager then
+        Jqz.SaveManager:Save();
     end;
 end;
 
-function Library:Create(Class, Properties)
+function Jqz:Create(Class, Properties)
     local _Instance = Class;
 
     if type(Class) == 'string' then
@@ -132,10 +132,10 @@ function Library:Create(Class, Properties)
     return _Instance;
 end;
 
-function Library:ApplyTextStroke(Inst)
+function Jqz:ApplyTextStroke(Inst)
     Inst.TextStrokeTransparency = 1;
 
-    Library:Create('UIStroke', {
+    Jqz:Create('UIStroke', {
         Color = Color3.new(0, 0, 0);
         Thickness = 1;
         LineJoinMode = Enum.LineJoinMode.Miter;
@@ -143,25 +143,25 @@ function Library:ApplyTextStroke(Inst)
     });
 end;
 
-function Library:CreateLabel(Properties, IsHud)
-    local _Instance = Library:Create('TextLabel', {
+function Jqz:CreateLabel(Properties, IsHud)
+    local _Instance = Jqz:Create('TextLabel', {
         BackgroundTransparency = 1;
-        Font = Library.Font;
-        TextColor3 = Library.FontColor;
+        Font = Jqz.Font;
+        TextColor3 = Jqz.FontColor;
         TextSize = 16;
         TextStrokeTransparency = 0;
     });
 
-    Library:ApplyTextStroke(_Instance);
+    Jqz:ApplyTextStroke(_Instance);
 
-    Library:AddToRegistry(_Instance, {
+    Jqz:AddToRegistry(_Instance, {
         TextColor3 = 'FontColor';
     }, IsHud);
 
-    return Library:Create(_Instance, Properties);
+    return Jqz:Create(_Instance, Properties);
 end;
 
-function Library:MakeDraggable(Instance, Cutoff)
+function Jqz:MakeDraggable(Instance, Cutoff)
     Instance.Active = true;
 
     Instance.InputBegan:Connect(function(Input)
@@ -189,44 +189,44 @@ function Library:MakeDraggable(Instance, Cutoff)
     end)
 end;
 
-function Library:AddToolTip(InfoStr, HoverInstance)
-    local X, Y = Library:GetTextBounds(InfoStr, Library.Font, 14);
-    local Tooltip = Library:Create('Frame', {
-        BackgroundColor3 = Library.MainColor,
-        BorderColor3 = Library.OutlineColor,
+function Jqz:AddToolTip(InfoStr, HoverInstance)
+    local X, Y = Jqz:GetTextBounds(InfoStr, Jqz.Font, 14);
+    local Tooltip = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.MainColor,
+        BorderColor3 = Jqz.OutlineColor,
 
         Size = UDim2.fromOffset(X + 5, Y + 4),
         ZIndex = 100,
-        Parent = Library.ScreenGui,
+        Parent = Jqz.ScreenGui,
 
         Visible = false,
     })
 
-    local Label = Library:CreateLabel({
+    local Label = Jqz:CreateLabel({
         Position = UDim2.fromOffset(3, 1),
         Size = UDim2.fromOffset(X, Y);
         TextSize = 14;
         Text = InfoStr,
-        TextColor3 = Library.FontColor,
+        TextColor3 = Jqz.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left;
         ZIndex = Tooltip.ZIndex + 1,
 
         Parent = Tooltip;
     });
 
-    Library:AddToRegistry(Tooltip, {
+    Jqz:AddToRegistry(Tooltip, {
         BackgroundColor3 = 'MainColor';
         BorderColor3 = 'OutlineColor';
     });
 
-    Library:AddToRegistry(Label, {
+    Jqz:AddToRegistry(Label, {
         TextColor3 = 'FontColor',
     });
 
     local IsHovering = false
 
     HoverInstance.MouseEnter:Connect(function()
-        if Library:MouseIsOverOpenedFrame() then
+        if Jqz:MouseIsOverOpenedFrame() then
             return
         end
 
@@ -247,12 +247,12 @@ function Library:AddToolTip(InfoStr, HoverInstance)
     end)
 end
 
-function Library:OnHighlight(HighlightInstance, Instance, Properties, PropertiesDefault)
+function Jqz:OnHighlight(HighlightInstance, Instance, Properties, PropertiesDefault)
     HighlightInstance.MouseEnter:Connect(function()
-        local Reg = Library.RegistryMap[Instance];
+        local Reg = Jqz.RegistryMap[Instance];
 
         for Property, ColorIdx in next, Properties do
-            Instance[Property] = Library[ColorIdx] or ColorIdx;
+            Instance[Property] = Jqz[ColorIdx] or ColorIdx;
 
             if Reg and Reg.Properties[Property] then
                 Reg.Properties[Property] = ColorIdx;
@@ -261,10 +261,10 @@ function Library:OnHighlight(HighlightInstance, Instance, Properties, Properties
     end)
 
     HighlightInstance.MouseLeave:Connect(function()
-        local Reg = Library.RegistryMap[Instance];
+        local Reg = Jqz.RegistryMap[Instance];
 
         for Property, ColorIdx in next, PropertiesDefault do
-            Instance[Property] = Library[ColorIdx] or ColorIdx;
+            Instance[Property] = Jqz[ColorIdx] or ColorIdx;
 
             if Reg and Reg.Properties[Property] then
                 Reg.Properties[Property] = ColorIdx;
@@ -273,8 +273,8 @@ function Library:OnHighlight(HighlightInstance, Instance, Properties, Properties
     end)
 end;
 
-function Library:MouseIsOverOpenedFrame()
-    for Frame, _ in next, Library.OpenedFrames do
+function Jqz:MouseIsOverOpenedFrame()
+    for Frame, _ in next, Jqz.OpenedFrames do
         local AbsPos, AbsSize = Frame.AbsolutePosition, Frame.AbsoluteSize;
 
         if Mouse.X >= AbsPos.X and Mouse.X <= AbsPos.X + AbsSize.X
@@ -285,7 +285,7 @@ function Library:MouseIsOverOpenedFrame()
     end;
 end;
 
-function Library:IsMouseOverFrame(Frame)
+function Jqz:IsMouseOverFrame(Frame)
     local AbsPos, AbsSize = Frame.AbsolutePosition, Frame.AbsoluteSize;
 
     if Mouse.X >= AbsPos.X and Mouse.X <= AbsPos.X + AbsSize.X
@@ -295,78 +295,68 @@ function Library:IsMouseOverFrame(Frame)
     end;
 end;
 
-function Library:UpdateDependencyBoxes()
-    for _, Depbox in next, Library.DependencyBoxes do
+function Jqz:UpdateDependencyBoxes()
+    for _, Depbox in next, Jqz.DependencyBoxes do
         Depbox:Update();
     end;
 end;
 
-function Library:MapValue(Value, MinA, MaxA, MinB, MaxB)
+function Jqz:MapValue(Value, MinA, MaxA, MinB, MaxB)
     return (1 - ((Value - MinA) / (MaxA - MinA))) * MinB + ((Value - MinA) / (MaxA - MinA)) * MaxB;
 end;
 
-function Library:GetTextBounds(Text, Font, Size, Resolution)
+function Jqz:GetTextBounds(Text, Font, Size, Resolution)
     local Bounds = TextService:GetTextSize(Text, Size, Font, Resolution or Vector2.new(1920, 1080))
     return Bounds.X, Bounds.Y
 end;
 
-function Library:GetDarkerColor(Color)
+function Jqz:GetDarkerColor(Color)
     local H, S, V = Color3.toHSV(Color);
     return Color3.fromHSV(H, S, V / 1.5);
 end;
-Library.AccentColorDark = Library:GetDarkerColor(Library.AccentColor);
+Jqz.AccentColorDark = Jqz:GetDarkerColor(Jqz.AccentColor);
 
-function Library:AddToRegistry(Instance, Properties, IsHud)
-    local Idx = #Library.Registry + 1;
+function Jqz:AddToRegistry(Instance, Properties, IsHud)
+    local Idx = #Jqz.Registry + 1;
     local Data = {
         Instance = Instance;
         Properties = Properties;
         Idx = Idx;
     };
 
-    table.insert(Library.Registry, Data);
-    Library.RegistryMap[Instance] = Data;
+    table.insert(Jqz.Registry, Data);
+    Jqz.RegistryMap[Instance] = Data;
 
     if IsHud then
-        table.insert(Library.HudRegistry, Data);
+        table.insert(Jqz.HudRegistry, Data);
     end;
 end;
 
-function Library:RemoveFromRegistry(Instance)
-    local Data = Library.RegistryMap[Instance];
+function Jqz:RemoveFromRegistry(Instance)
+    local Data = Jqz.RegistryMap[Instance];
 
     if Data then
-        for Idx = #Library.Registry, 1, -1 do
-            if Library.Registry[Idx] == Data then
-                table.remove(Library.Registry, Idx);
+        for Idx = #Jqz.Registry, 1, -1 do
+            if Jqz.Registry[Idx] == Data then
+                table.remove(Jqz.Registry, Idx);
             end;
         end;
 
-        for Idx = #Library.HudRegistry, 1, -1 do
-            if Library.HudRegistry[Idx] == Data then
-                table.remove(Library.HudRegistry, Idx);
+        for Idx = #Jqz.HudRegistry, 1, -1 do
+            if Jqz.HudRegistry[Idx] == Data then
+                table.remove(Jqz.HudRegistry, Idx);
             end;
         end;
 
-        Library.RegistryMap[Instance] = nil;
+        Jqz.RegistryMap[Instance] = nil;
     end;
 end;
 
-function Library:UpdateColorsUsingRegistry()
-    -- TODO: Could have an 'active' list of objects
-    -- where the active list only contains Visible objects.
-
-    -- IMPL: Could setup .Changed events on the AddToRegistry function
-    -- that listens for the 'Visible' propert being changed.
-    -- Visible: true => Add to active list, and call UpdateColors function
-    -- Visible: false => Remove from active list.
-
-    -- The above would be especially efficient for a rainbow menu color or live color-changing.
-
-    for Idx, Object in next, Library.Registry do
+function Jqz:UpdateColorsUsingRegistry()
+    for Idx, Object in next, Jqz.Registry do
         for Property, ColorIdx in next, Object.Properties do
             if type(ColorIdx) == 'string' then
-                Object.Instance[Property] = Library[ColorIdx];
+                Object.Instance[Property] = Jqz[ColorIdx];
             elseif type(ColorIdx) == 'function' then
                 Object.Instance[Property] = ColorIdx()
             end
@@ -374,33 +364,33 @@ function Library:UpdateColorsUsingRegistry()
     end;
 end;
 
-function Library:GiveSignal(Signal)
+function Jqz:GiveSignal(Signal)
     -- Only used for signals not attached to library instances, as those should be cleaned up on object destruction by Roblox
-    table.insert(Library.Signals, Signal)
+    table.insert(Jqz.Signals, Signal)
 end
 
-function Library:Unload()
+function Jqz:Unload()
     -- Unload all of the signals
-    for Idx = #Library.Signals, 1, -1 do
-        local Connection = table.remove(Library.Signals, Idx)
+    for Idx = #Jqz.Signals, 1, -1 do
+        local Connection = table.remove(Jqz.Signals, Idx)
         Connection:Disconnect()
     end
 
      -- Call our unload callback, maybe to undo some hooks etc
-    if Library.OnUnload then
-        Library.OnUnload()
+    if Jqz.OnUnload then
+        Jqz.OnUnload()
     end
 
     ScreenGui:Destroy()
 end
 
-function Library:OnUnload(Callback)
-    Library.OnUnload = Callback
+function Jqz:OnUnload(Callback)
+    Jqz.OnUnload = Callback
 end
 
-Library:GiveSignal(ScreenGui.DescendantRemoving:Connect(function(Instance)
-    if Library.RegistryMap[Instance] then
-        Library:RemoveFromRegistry(Instance);
+Jqz:GiveSignal(ScreenGui.DescendantRemoving:Connect(function(Instance)
+    if Jqz.RegistryMap[Instance] then
+        Jqz:RemoveFromRegistry(Instance);
     end;
 end))
 
@@ -411,7 +401,6 @@ do
 
     function Funcs:AddColorPicker(Idx, Info)
         local ToggleLabel = self.TextLabel;
-        -- local Container = self.Container;
 
         assert(Info.Default, 'AddColorPicker: Missing default value.');
 
@@ -433,9 +422,9 @@ do
 
         ColorPicker:SetHSVFromRGB(ColorPicker.Value);
 
-        local DisplayFrame = Library:Create('Frame', {
+        local DisplayFrame = Jqz:Create('Frame', {
             BackgroundColor3 = ColorPicker.Value;
-            BorderColor3 = Library:GetDarkerColor(ColorPicker.Value);
+            BorderColor3 = Jqz:GetDarkerColor(ColorPicker.Value);
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(0, 28, 0, 14);
             ZIndex = 6;
@@ -443,7 +432,7 @@ do
         });
 
         -- Transparency image taken from https://github.com/matas3535/SplixPrivateDrawingLibrary/blob/main/Library.lua cus i'm lazy
-        local CheckerFrame = Library:Create('ImageLabel', {
+        local CheckerFrame = Jqz:Create('ImageLabel', {
             BorderSizePixel = 0;
             Size = UDim2.new(0, 27, 0, 13);
             ZIndex = 5;
@@ -452,12 +441,7 @@ do
             Parent = DisplayFrame;
         });
 
-        -- 1/16/23
-        -- Rewrote this to be placed inside the Library ScreenGui
-        -- There was some issue which caused RelativeOffset to be way off
-        -- Thus the color picker would never show
-
-        local PickerFrameOuter = Library:Create('Frame', {
+        local PickerFrameOuter = Jqz:Create('Frame', {
             Name = 'Color';
             BackgroundColor3 = Color3.new(1, 1, 1);
             BorderColor3 = Color3.new(0, 0, 0);
@@ -472,24 +456,24 @@ do
             PickerFrameOuter.Position = UDim2.fromOffset(DisplayFrame.AbsolutePosition.X, DisplayFrame.AbsolutePosition.Y + 18);
         end)
 
-        local PickerFrameInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.BackgroundColor;
-            BorderColor3 = Library.OutlineColor;
+        local PickerFrameInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.BackgroundColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 16;
             Parent = PickerFrameOuter;
         });
 
-        local Highlight = Library:Create('Frame', {
-            BackgroundColor3 = Library.AccentColor;
+        local Highlight = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.AccentColor;
             BorderSizePixel = 0;
             Size = UDim2.new(1, 0, 0, 2);
             ZIndex = 17;
             Parent = PickerFrameInner;
         });
 
-        local SatVibMapOuter = Library:Create('Frame', {
+        local SatVibMapOuter = Jqz:Create('Frame', {
             BorderColor3 = Color3.new(0, 0, 0);
             Position = UDim2.new(0, 4, 0, 25);
             Size = UDim2.new(0, 200, 0, 200);
@@ -497,16 +481,16 @@ do
             Parent = PickerFrameInner;
         });
 
-        local SatVibMapInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.BackgroundColor;
-            BorderColor3 = Library.OutlineColor;
+        local SatVibMapInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.BackgroundColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 18;
             Parent = SatVibMapOuter;
         });
 
-        local SatVibMap = Library:Create('ImageLabel', {
+        local SatVibMap = Jqz:Create('ImageLabel', {
             BorderSizePixel = 0;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 18;
@@ -514,7 +498,7 @@ do
             Parent = SatVibMapInner;
         });
 
-        local CursorOuter = Library:Create('ImageLabel', {
+        local CursorOuter = Jqz:Create('ImageLabel', {
             AnchorPoint = Vector2.new(0.5, 0.5);
             Size = UDim2.new(0, 6, 0, 6);
             BackgroundTransparency = 1;
@@ -524,7 +508,7 @@ do
             Parent = SatVibMap;
         });
 
-        local CursorInner = Library:Create('ImageLabel', {
+        local CursorInner = Jqz:Create('ImageLabel', {
             Size = UDim2.new(0, CursorOuter.Size.X.Offset - 2, 0, CursorOuter.Size.Y.Offset - 2);
             Position = UDim2.new(0, 1, 0, 1);
             BackgroundTransparency = 1;
@@ -533,7 +517,7 @@ do
             Parent = CursorOuter;
         })
 
-        local HueSelectorOuter = Library:Create('Frame', {
+        local HueSelectorOuter = Jqz:Create('Frame', {
             BorderColor3 = Color3.new(0, 0, 0);
             Position = UDim2.new(0, 208, 0, 25);
             Size = UDim2.new(0, 15, 0, 200);
@@ -541,7 +525,7 @@ do
             Parent = PickerFrameInner;
         });
 
-        local HueSelectorInner = Library:Create('Frame', {
+        local HueSelectorInner = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(1, 1, 1);
             BorderSizePixel = 0;
             Size = UDim2.new(1, 0, 1, 0);
@@ -549,7 +533,7 @@ do
             Parent = HueSelectorOuter;
         });
 
-        local HueCursor = Library:Create('Frame', { 
+        local HueCursor = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(1, 1, 1);
             AnchorPoint = Vector2.new(0, 0.5);
             BorderColor3 = Color3.new(0, 0, 0);
@@ -558,7 +542,7 @@ do
             Parent = HueSelectorInner;
         });
 
-        local HueBoxOuter = Library:Create('Frame', {
+        local HueBoxOuter = Jqz:Create('Frame', {
             BorderColor3 = Color3.new(0, 0, 0);
             Position = UDim2.fromOffset(4, 228),
             Size = UDim2.new(0.5, -6, 0, 20),
@@ -566,16 +550,16 @@ do
             Parent = PickerFrameInner;
         });
 
-        local HueBoxInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
+        local HueBoxInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.MainColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 18,
             Parent = HueBoxOuter;
         });
 
-        Library:Create('UIGradient', {
+        Jqz:Create('UIGradient', {
             Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
                 ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
@@ -584,15 +568,15 @@ do
             Parent = HueBoxInner;
         });
 
-        local HueBox = Library:Create('TextBox', {
+        local HueBox = Jqz:Create('TextBox', {
             BackgroundTransparency = 1;
             Position = UDim2.new(0, 5, 0, 0);
             Size = UDim2.new(1, -5, 1, 0);
-            Font = Library.Font;
+            Font = Jqz.Font;
             PlaceholderColor3 = Color3.fromRGB(190, 190, 190);
             PlaceholderText = 'Hex color',
             Text = '#FFFFFF',
-            TextColor3 = Library.FontColor;
+            TextColor3 = Jqz.FontColor;
             TextSize = 14;
             TextStrokeTransparency = 0;
             TextXAlignment = Enum.TextXAlignment.Left;
@@ -600,24 +584,24 @@ do
             Parent = HueBoxInner;
         });
 
-        Library:ApplyTextStroke(HueBox);
+        Jqz:ApplyTextStroke(HueBox);
 
-        local RgbBoxBase = Library:Create(HueBoxOuter:Clone(), {
+        local RgbBoxBase = Jqz:Create(HueBoxOuter:Clone(), {
             Position = UDim2.new(0.5, 2, 0, 228),
             Size = UDim2.new(0.5, -6, 0, 20),
             Parent = PickerFrameInner
         });
 
-        local RgbBox = Library:Create(RgbBoxBase.Frame:FindFirstChild('TextBox'), {
+        local RgbBox = Jqz:Create(RgbBoxBase.Frame:FindFirstChild('TextBox'), {
             Text = '255, 255, 255',
             PlaceholderText = 'RGB color',
-            TextColor3 = Library.FontColor
+            TextColor3 = Jqz.FontColor
         });
 
         local TransparencyBoxOuter, TransparencyBoxInner, TransparencyCursor;
-        
-        if Info.Transparency then 
-            TransparencyBoxOuter = Library:Create('Frame', {
+
+        if Info.Transparency then
+            TransparencyBoxOuter = Jqz:Create('Frame', {
                 BorderColor3 = Color3.new(0, 0, 0);
                 Position = UDim2.fromOffset(4, 251);
                 Size = UDim2.new(1, -8, 0, 15);
@@ -625,18 +609,18 @@ do
                 Parent = PickerFrameInner;
             });
 
-            TransparencyBoxInner = Library:Create('Frame', {
+            TransparencyBoxInner = Jqz:Create('Frame', {
                 BackgroundColor3 = ColorPicker.Value;
-                BorderColor3 = Library.OutlineColor;
+                BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, 0, 1, 0);
                 ZIndex = 19;
                 Parent = TransparencyBoxOuter;
             });
 
-            Library:AddToRegistry(TransparencyBoxInner, { BorderColor3 = 'OutlineColor' });
+            Jqz:AddToRegistry(TransparencyBoxInner, { BorderColor3 = 'OutlineColor' });
 
-            Library:Create('ImageLabel', {
+            Jqz:Create('ImageLabel', {
                 BackgroundTransparency = 1;
                 Size = UDim2.new(1, 0, 1, 0);
                 Image = 'http://www.roblox.com/asset/?id=12978095818';
@@ -644,7 +628,7 @@ do
                 Parent = TransparencyBoxInner;
             });
 
-            TransparencyCursor = Library:Create('Frame', { 
+            TransparencyCursor = Jqz:Create('Frame', {
                 BackgroundColor3 = Color3.new(1, 1, 1);
                 AnchorPoint = Vector2.new(0.5, 0);
                 BorderColor3 = Color3.new(0, 0, 0);
@@ -654,22 +638,21 @@ do
             });
         end;
 
-        local DisplayLabel = Library:CreateLabel({
+        local DisplayLabel = Jqz:CreateLabel({
             Size = UDim2.new(1, 0, 0, 14);
             Position = UDim2.fromOffset(5, 5);
             TextXAlignment = Enum.TextXAlignment.Left;
             TextSize = 14;
-            Text = ColorPicker.Title,--Info.Default;
+            Text = ColorPicker.Title,
             TextWrapped = false;
             ZIndex = 16;
             Parent = PickerFrameInner;
         });
 
-
         local ContextMenu = {}
         do
             ContextMenu.Options = {}
-            ContextMenu.Container = Library:Create('Frame', {
+            ContextMenu.Container = Jqz:Create('Frame', {
                 BorderColor3 = Color3.new(),
                 ZIndex = 14,
 
@@ -677,23 +660,23 @@ do
                 Parent = ScreenGui
             })
 
-            ContextMenu.Inner = Library:Create('Frame', {
-                BackgroundColor3 = Library.BackgroundColor;
-                BorderColor3 = Library.OutlineColor;
+            ContextMenu.Inner = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.BackgroundColor;
+                BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.fromScale(1, 1);
                 ZIndex = 15;
                 Parent = ContextMenu.Container;
             });
 
-            Library:Create('UIListLayout', {
+            Jqz:Create('UIListLayout', {
                 Name = 'Layout',
                 FillDirection = Enum.FillDirection.Vertical;
                 SortOrder = Enum.SortOrder.LayoutOrder;
                 Parent = ContextMenu.Inner;
             });
 
-            Library:Create('UIPadding', {
+            Jqz:Create('UIPadding', {
                 Name = 'Padding',
                 PaddingLeft = UDim.new(0, 4),
                 Parent = ContextMenu.Inner,
@@ -726,7 +709,7 @@ do
             task.spawn(updateMenuPosition)
             task.spawn(updateMenuSize)
 
-            Library:AddToRegistry(ContextMenu.Inner, {
+            Jqz:AddToRegistry(ContextMenu.Inner, {
                 BackgroundColor3 = 'BackgroundColor';
                 BorderColor3 = 'OutlineColor';
             });
@@ -744,7 +727,7 @@ do
                     Callback = function() end
                 end
 
-                local Button = Library:CreateLabel({
+                local Button = Jqz:CreateLabel({
                     Active = false;
                     Size = UDim2.new(1, 0, 0, 15);
                     TextSize = 13;
@@ -754,7 +737,7 @@ do
                     TextXAlignment = Enum.TextXAlignment.Left,
                 });
 
-                Library:OnHighlight(Button, Button, 
+                Jqz:OnHighlight(Button, Button,
                     { TextColor3 = 'AccentColor' },
                     { TextColor3 = 'FontColor' }
                 );
@@ -769,38 +752,36 @@ do
             end
 
             ContextMenu:AddOption('Copy color', function()
-                Library.ColorClipboard = ColorPicker.Value
-                Library:Notify('Copied color!', 2)
+                Jqz.ColorClipboard = ColorPicker.Value
+                Jqz:Notify('Copied color!', 2)
             end)
 
             ContextMenu:AddOption('Paste color', function()
-                if not Library.ColorClipboard then
-                    return Library:Notify('You have not copied a color!', 2)
+                if not Jqz.ColorClipboard then
+                    return Jqz:Notify('You have not copied a color!', 2)
                 end
-                ColorPicker:SetValueRGB(Library.ColorClipboard)
+                ColorPicker:SetValueRGB(Jqz.ColorClipboard)
             end)
-
 
             ContextMenu:AddOption('Copy HEX', function()
                 pcall(setclipboard, ColorPicker.Value:ToHex())
-                Library:Notify('Copied hex code to clipboard!', 2)
+                Jqz:Notify('Copied hex code to clipboard!', 2)
             end)
 
             ContextMenu:AddOption('Copy RGB', function()
                 pcall(setclipboard, table.concat({ math.floor(ColorPicker.Value.R * 255), math.floor(ColorPicker.Value.G * 255), math.floor(ColorPicker.Value.B * 255) }, ', '))
-                Library:Notify('Copied RGB values to clipboard!', 2)
+                Jqz:Notify('Copied RGB values to clipboard!', 2)
             end)
-
         end
 
-        Library:AddToRegistry(PickerFrameInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
-        Library:AddToRegistry(Highlight, { BackgroundColor3 = 'AccentColor'; });
-        Library:AddToRegistry(SatVibMapInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
+        Jqz:AddToRegistry(PickerFrameInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
+        Jqz:AddToRegistry(Highlight, { BackgroundColor3 = 'AccentColor'; });
+        Jqz:AddToRegistry(SatVibMapInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
 
-        Library:AddToRegistry(HueBoxInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
-        Library:AddToRegistry(RgbBoxBase.Frame, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
-        Library:AddToRegistry(RgbBox, { TextColor3 = 'FontColor', });
-        Library:AddToRegistry(HueBox, { TextColor3 = 'FontColor', });
+        Jqz:AddToRegistry(HueBoxInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
+        Jqz:AddToRegistry(RgbBoxBase.Frame, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
+        Jqz:AddToRegistry(RgbBox, { TextColor3 = 'FontColor', });
+        Jqz:AddToRegistry(HueBox, { TextColor3 = 'FontColor', });
 
         local SequenceTable = {};
 
@@ -808,7 +789,7 @@ do
             table.insert(SequenceTable, ColorSequenceKeypoint.new(Hue, Color3.fromHSV(Hue, 1, 1)));
         end;
 
-        local HueSelectorGradient = Library:Create('UIGradient', {
+        local HueSelectorGradient = Jqz:Create('UIGradient', {
             Color = ColorSequence.new(SequenceTable);
             Rotation = 90;
             Parent = HueSelectorInner;
@@ -840,10 +821,10 @@ do
             ColorPicker.Value = Color3.fromHSV(ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib);
             SatVibMap.BackgroundColor3 = Color3.fromHSV(ColorPicker.Hue, 1, 1);
 
-            Library:Create(DisplayFrame, {
+            Jqz:Create(DisplayFrame, {
                 BackgroundColor3 = ColorPicker.Value;
                 BackgroundTransparency = ColorPicker.Transparency;
-                BorderColor3 = Library:GetDarkerColor(ColorPicker.Value);
+                BorderColor3 = Jqz:GetDarkerColor(ColorPicker.Value);
             });
 
             if TransparencyBoxInner then
@@ -857,8 +838,8 @@ do
             HueBox.Text = '#' .. ColorPicker.Value:ToHex()
             RgbBox.Text = table.concat({ math.floor(ColorPicker.Value.R * 255), math.floor(ColorPicker.Value.G * 255), math.floor(ColorPicker.Value.B * 255) }, ', ')
 
-            Library:SafeCallback(ColorPicker.Callback, ColorPicker.Value);
-            Library:SafeCallback(ColorPicker.Changed, ColorPicker.Value);
+            Jqz:SafeCallback(ColorPicker.Callback, ColorPicker.Value);
+            Jqz:SafeCallback(ColorPicker.Changed, ColorPicker.Value);
         end;
 
         function ColorPicker:OnChanged(Func)
@@ -867,20 +848,20 @@ do
         end;
 
         function ColorPicker:Show()
-            for Frame, Val in next, Library.OpenedFrames do
+            for Frame, Val in next, Jqz.OpenedFrames do
                 if Frame.Name == 'Color' then
                     Frame.Visible = false;
-                    Library.OpenedFrames[Frame] = nil;
+                    Jqz.OpenedFrames[Frame] = nil;
                 end;
             end;
 
             PickerFrameOuter.Visible = true;
-            Library.OpenedFrames[PickerFrameOuter] = true;
+            Jqz.OpenedFrames[PickerFrameOuter] = true;
         end;
 
         function ColorPicker:Hide()
             PickerFrameOuter.Visible = false;
-            Library.OpenedFrames[PickerFrameOuter] = nil;
+            Jqz.OpenedFrames[PickerFrameOuter] = nil;
         end;
 
         function ColorPicker:SetValue(HSV, Transparency)
@@ -915,7 +896,7 @@ do
                     RenderStepped:Wait();
                 end;
 
-                Library:AttemptSave();
+                Jqz:AttemptSave();
             end;
         end);
 
@@ -932,19 +913,19 @@ do
                     RenderStepped:Wait();
                 end;
 
-                Library:AttemptSave();
+                Jqz:AttemptSave();
             end;
         end);
 
         DisplayFrame.InputBegan:Connect(function(Input)
-            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Jqz:MouseIsOverOpenedFrame() then
                 if PickerFrameOuter.Visible then
                     ColorPicker:Hide()
                 else
                     ContextMenu:Hide()
                     ColorPicker:Show()
                 end;
-            elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and not Library:MouseIsOverOpenedFrame() then
+            elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and not Jqz:MouseIsOverOpenedFrame() then
                 ContextMenu:Show()
                 ColorPicker:Hide()
             end
@@ -965,12 +946,12 @@ do
                         RenderStepped:Wait();
                     end;
 
-                    Library:AttemptSave();
+                    Jqz:AttemptSave();
                 end;
             end);
         end;
 
-        Library:GiveSignal(InputService.InputBegan:Connect(function(Input)
+        Jqz:GiveSignal(InputService.InputBegan:Connect(function(Input)
             if Input.UserInputType == Enum.UserInputType.MouseButton1 then
                 local AbsPos, AbsSize = PickerFrameOuter.AbsolutePosition, PickerFrameOuter.AbsoluteSize;
 
@@ -980,13 +961,13 @@ do
                     ColorPicker:Hide();
                 end;
 
-                if not Library:IsMouseOverFrame(ContextMenu.Container) then
+                if not Jqz:IsMouseOverFrame(ContextMenu.Container) then
                     ContextMenu:Hide()
                 end
             end;
 
             if Input.UserInputType == Enum.UserInputType.MouseButton2 and ContextMenu.Container.Visible then
-                if not Library:IsMouseOverFrame(ContextMenu.Container) and not Library:IsMouseOverFrame(DisplayFrame) then
+                if not Jqz:IsMouseOverFrame(ContextMenu.Container) and not Jqz:IsMouseOverFrame(DisplayFrame) then
                     ContextMenu:Hide()
                 end
             end
@@ -1023,7 +1004,7 @@ do
             Info.Mode = 'Toggle'
         end
 
-        local PickOuter = Library:Create('Frame', {
+        local PickOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(0, 28, 0, 15);
@@ -1031,21 +1012,21 @@ do
             Parent = ToggleLabel;
         });
 
-        local PickInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.BackgroundColor;
-            BorderColor3 = Library.OutlineColor;
+        local PickInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.BackgroundColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 7;
             Parent = PickOuter;
         });
 
-        Library:AddToRegistry(PickInner, {
+        Jqz:AddToRegistry(PickInner, {
             BackgroundColor3 = 'BackgroundColor';
             BorderColor3 = 'OutlineColor';
         });
 
-        local DisplayLabel = Library:CreateLabel({
+        local DisplayLabel = Jqz:CreateLabel({
             Size = UDim2.new(1, 0, 1, 0);
             TextSize = 13;
             Text = Info.Default;
@@ -1054,7 +1035,7 @@ do
             Parent = PickInner;
         });
 
-        local ModeSelectOuter = Library:Create('Frame', {
+        local ModeSelectOuter = Jqz:Create('Frame', {
             BorderColor3 = Color3.new(0, 0, 0);
             Position = UDim2.fromOffset(ToggleLabel.AbsolutePosition.X + ToggleLabel.AbsoluteSize.X + 4, ToggleLabel.AbsolutePosition.Y + 1);
             Size = UDim2.new(0, 60, 0, 45 + 2);
@@ -1067,33 +1048,33 @@ do
             ModeSelectOuter.Position = UDim2.fromOffset(ToggleLabel.AbsolutePosition.X + ToggleLabel.AbsoluteSize.X + 4, ToggleLabel.AbsolutePosition.Y + 1);
         end);
 
-        local ModeSelectInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.BackgroundColor;
-            BorderColor3 = Library.OutlineColor;
+        local ModeSelectInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.BackgroundColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 15;
             Parent = ModeSelectOuter;
         });
 
-        Library:AddToRegistry(ModeSelectInner, {
+        Jqz:AddToRegistry(ModeSelectInner, {
             BackgroundColor3 = 'BackgroundColor';
             BorderColor3 = 'OutlineColor';
         });
 
-        Library:Create('UIListLayout', {
+        Jqz:Create('UIListLayout', {
             FillDirection = Enum.FillDirection.Vertical;
             SortOrder = Enum.SortOrder.LayoutOrder;
             Parent = ModeSelectInner;
         });
 
-        local ContainerLabel = Library:CreateLabel({
+        local ContainerLabel = Jqz:CreateLabel({
             TextXAlignment = Enum.TextXAlignment.Left;
             Size = UDim2.new(1, 0, 0, 18);
             TextSize = 13;
             Visible = false;
             ZIndex = 110;
-            Parent = Library.KeybindContainer;
+            Parent = Jqz.KeybindContainer;
         },  true);
 
         local Modes = Info.Modes or { 'Always', 'Toggle', 'Hold' };
@@ -1102,7 +1083,7 @@ do
         for Idx, Mode in next, Modes do
             local ModeButton = {};
 
-            local Label = Library:CreateLabel({
+            local Label = Jqz:CreateLabel({
                 Active = false;
                 Size = UDim2.new(1, 0, 0, 15);
                 TextSize = 13;
@@ -1118,8 +1099,8 @@ do
 
                 KeyPicker.Mode = Mode;
 
-                Label.TextColor3 = Library.AccentColor;
-                Library.RegistryMap[Label].Properties.TextColor3 = 'AccentColor';
+                Label.TextColor3 = Jqz.AccentColor;
+                Jqz.RegistryMap[Label].Properties.TextColor3 = 'AccentColor';
 
                 ModeSelectOuter.Visible = false;
             end;
@@ -1127,14 +1108,14 @@ do
             function ModeButton:Deselect()
                 KeyPicker.Mode = nil;
 
-                Label.TextColor3 = Library.FontColor;
-                Library.RegistryMap[Label].Properties.TextColor3 = 'FontColor';
+                Label.TextColor3 = Jqz.FontColor;
+                Jqz.RegistryMap[Label].Properties.TextColor3 = 'FontColor';
             end;
 
             Label.InputBegan:Connect(function(Input)
                 if Input.UserInputType == Enum.UserInputType.MouseButton1 then
                     ModeButton:Select();
-                    Library:AttemptSave();
+                    Jqz:AttemptSave();
                 end;
             end);
 
@@ -1155,14 +1136,14 @@ do
             ContainerLabel.Text = string.format('[%s] %s (%s)', KeyPicker.Value, Info.Text, KeyPicker.Mode);
 
             ContainerLabel.Visible = true;
-            ContainerLabel.TextColor3 = State and Library.AccentColor or Library.FontColor;
+            ContainerLabel.TextColor3 = State and Jqz.AccentColor or Jqz.FontColor;
 
-            Library.RegistryMap[ContainerLabel].Properties.TextColor3 = State and 'AccentColor' or 'FontColor';
+            Jqz.RegistryMap[ContainerLabel].Properties.TextColor3 = State and 'AccentColor' or 'FontColor';
 
             local YSize = 0
             local XSize = 0
 
-            for _, Label in next, Library.KeybindContainer:GetChildren() do
+            for _, Label in next, Jqz.KeybindContainer:GetChildren() do
                 if Label:IsA('TextLabel') and Label.Visible then
                     YSize = YSize + 18;
                     if (Label.TextBounds.X > XSize) then
@@ -1171,7 +1152,7 @@ do
                 end;
             end;
 
-            Library.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 210), 0, YSize + 23)
+            Jqz.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 210), 0, YSize + 23)
         end;
 
         function KeyPicker:GetState()
@@ -1221,14 +1202,14 @@ do
                 ParentObj:SetValue(not ParentObj.Value)
             end
 
-            Library:SafeCallback(KeyPicker.Callback, KeyPicker.Toggled)
-            Library:SafeCallback(KeyPicker.Clicked, KeyPicker.Toggled)
+            Jqz:SafeCallback(KeyPicker.Callback, KeyPicker.Toggled)
+            Jqz:SafeCallback(KeyPicker.Clicked, KeyPicker.Toggled)
         end
 
         local Picking = false;
 
         PickOuter.InputBegan:Connect(function(Input)
-            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Jqz:MouseIsOverOpenedFrame() then
                 Picking = true;
 
                 DisplayLabel.Text = '';
@@ -1269,19 +1250,19 @@ do
                     DisplayLabel.Text = Key;
                     KeyPicker.Value = Key;
 
-                    Library:SafeCallback(KeyPicker.ChangedCallback, Input.KeyCode or Input.UserInputType)
-                    Library:SafeCallback(KeyPicker.Changed, Input.KeyCode or Input.UserInputType)
+                    Jqz:SafeCallback(KeyPicker.ChangedCallback, Input.KeyCode or Input.UserInputType)
+                    Jqz:SafeCallback(KeyPicker.Changed, Input.KeyCode or Input.UserInputType)
 
-                    Library:AttemptSave();
+                    Jqz:AttemptSave();
 
                     Event:Disconnect();
                 end);
-            elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and not Library:MouseIsOverOpenedFrame() then
+            elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and not Jqz:MouseIsOverOpenedFrame() then
                 ModeSelectOuter.Visible = true;
             end;
         end);
 
-        Library:GiveSignal(InputService.InputBegan:Connect(function(Input)
+        Jqz:GiveSignal(InputService.InputBegan:Connect(function(Input)
             if (not Picking) then
                 if KeyPicker.Mode == 'Toggle' then
                     local Key = KeyPicker.Value;
@@ -1314,7 +1295,7 @@ do
             end;
         end))
 
-        Library:GiveSignal(InputService.InputEnded:Connect(function(Input)
+        Jqz:GiveSignal(InputService.InputEnded:Connect(function(Input)
             if (not Picking) then
                 KeyPicker:Update();
             end;
@@ -1342,7 +1323,7 @@ do
         local Groupbox = self;
         local Container = Groupbox.Container;
 
-        Library:Create('Frame', {
+        Jqz:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(1, 0, 0, Size);
             ZIndex = 1;
@@ -1356,7 +1337,7 @@ do
         local Groupbox = self;
         local Container = Groupbox.Container;
 
-        local TextLabel = Library:CreateLabel({
+        local TextLabel = Jqz:CreateLabel({
             Size = UDim2.new(1, -4, 0, 15);
             TextSize = 14;
             Text = Text;
@@ -1367,10 +1348,10 @@ do
         });
 
         if DoesWrap then
-            local Y = select(2, Library:GetTextBounds(Text, Library.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
+            local Y = select(2, Jqz:GetTextBounds(Text, Jqz.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
             TextLabel.Size = UDim2.new(1, -4, 0, Y)
         else
-            Library:Create('UIListLayout', {
+            Jqz:Create('UIListLayout', {
                 Padding = UDim.new(0, 4);
                 FillDirection = Enum.FillDirection.Horizontal;
                 HorizontalAlignment = Enum.HorizontalAlignment.Right;
@@ -1386,7 +1367,7 @@ do
             TextLabel.Text = Text
 
             if DoesWrap then
-                local Y = select(2, Library:GetTextBounds(Text, Library.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
+                local Y = select(2, Jqz:GetTextBounds(Text, Jqz.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
                 TextLabel.Size = UDim2.new(1, -4, 0, Y)
             end
 
@@ -1404,7 +1385,6 @@ do
     end;
 
     function Funcs:AddButton(...)
-        -- TODO: Eventually redo this
         local Button = {};
         local function ProcessButtonParams(Class, Obj, ...)
             local Props = select(1, ...)
@@ -1427,23 +1407,23 @@ do
         local Container = Groupbox.Container;
 
         local function CreateBaseButton(Button)
-            local Outer = Library:Create('Frame', {
+            local Outer = Jqz:Create('Frame', {
                 BackgroundColor3 = Color3.new(0, 0, 0);
                 BorderColor3 = Color3.new(0, 0, 0);
                 Size = UDim2.new(1, -4, 0, 20);
                 ZIndex = 5;
             });
 
-            local Inner = Library:Create('Frame', {
-                BackgroundColor3 = Library.MainColor;
-                BorderColor3 = Library.OutlineColor;
+            local Inner = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.MainColor;
+                BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, 0, 1, 0);
                 ZIndex = 6;
                 Parent = Outer;
             });
 
-            local Label = Library:CreateLabel({
+            local Label = Jqz:CreateLabel({
                 Size = UDim2.new(1, 0, 1, 0);
                 TextSize = 14;
                 Text = Button.Text;
@@ -1451,7 +1431,7 @@ do
                 Parent = Inner;
             });
 
-            Library:Create('UIGradient', {
+            Jqz:Create('UIGradient', {
                 Color = ColorSequence.new({
                     ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
                     ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
@@ -1460,16 +1440,16 @@ do
                 Parent = Inner;
             });
 
-            Library:AddToRegistry(Outer, {
+            Jqz:AddToRegistry(Outer, {
                 BorderColor3 = 'Black';
             });
 
-            Library:AddToRegistry(Inner, {
+            Jqz:AddToRegistry(Inner, {
                 BackgroundColor3 = 'MainColor';
                 BorderColor3 = 'OutlineColor';
             });
 
-            Library:OnHighlight(Outer, Outer,
+            Jqz:OnHighlight(Outer, Outer,
                 { BorderColor3 = 'AccentColor' },
                 { BorderColor3 = 'Black' }
             );
@@ -1496,7 +1476,7 @@ do
             end
 
             local function ValidateClick(Input)
-                if Library:MouseIsOverOpenedFrame() then
+                if Jqz:MouseIsOverOpenedFrame() then
                     return false
                 end
 
@@ -1512,30 +1492,30 @@ do
                 if Button.Locked then return end
 
                 if Button.DoubleClick then
-                    Library:RemoveFromRegistry(Button.Label)
-                    Library:AddToRegistry(Button.Label, { TextColor3 = 'AccentColor' })
+                    Jqz:RemoveFromRegistry(Button.Label)
+                    Jqz:AddToRegistry(Button.Label, { TextColor3 = 'AccentColor' })
 
-                    Button.Label.TextColor3 = Library.AccentColor
+                    Button.Label.TextColor3 = Jqz.AccentColor
                     Button.Label.Text = 'Are you sure?'
                     Button.Locked = true
 
                     local clicked = WaitForEvent(Button.Outer.InputBegan, 0.5, ValidateClick)
 
-                    Library:RemoveFromRegistry(Button.Label)
-                    Library:AddToRegistry(Button.Label, { TextColor3 = 'FontColor' })
+                    Jqz:RemoveFromRegistry(Button.Label)
+                    Jqz:AddToRegistry(Button.Label, { TextColor3 = 'FontColor' })
 
-                    Button.Label.TextColor3 = Library.FontColor
+                    Button.Label.TextColor3 = Jqz.FontColor
                     Button.Label.Text = Button.Text
                     task.defer(rawset, Button, 'Locked', false)
 
                     if clicked then
-                        Library:SafeCallback(Button.Func)
+                        Jqz:SafeCallback(Button.Func)
                     end
 
                     return
                 end
 
-                Library:SafeCallback(Button.Func);
+                Jqz:SafeCallback(Button.Func);
             end)
         end
 
@@ -1546,11 +1526,10 @@ do
 
         function Button:AddTooltip(tooltip)
             if type(tooltip) == 'string' then
-                Library:AddToolTip(tooltip, self.Outer)
+                Jqz:AddToolTip(tooltip, self.Outer)
             end
             return self
         end
-
 
         function Button:AddButton(...)
             local SubButton = {}
@@ -1567,7 +1546,7 @@ do
 
             function SubButton:AddTooltip(tooltip)
                 if type(tooltip) == 'string' then
-                    Library:AddToolTip(tooltip, self.Outer)
+                    Jqz:AddToolTip(tooltip, self.Outer)
                 end
                 return SubButton
             end
@@ -1599,7 +1578,7 @@ do
         }
 
         Groupbox:AddBlank(2);
-        local DividerOuter = Library:Create('Frame', {
+        local DividerOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(1, -4, 0, 5);
@@ -1607,20 +1586,20 @@ do
             Parent = Container;
         });
 
-        local DividerInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
+        local DividerInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.MainColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = DividerOuter;
         });
 
-        Library:AddToRegistry(DividerOuter, {
+        Jqz:AddToRegistry(DividerOuter, {
             BorderColor3 = 'Black';
         });
 
-        Library:AddToRegistry(DividerInner, {
+        Jqz:AddToRegistry(DividerInner, {
             BackgroundColor3 = 'MainColor';
             BorderColor3 = 'OutlineColor';
         });
@@ -1643,7 +1622,7 @@ do
         local Groupbox = self;
         local Container = Groupbox.Container;
 
-        local InputLabel = Library:CreateLabel({
+        local InputLabel = Jqz:CreateLabel({
             Size = UDim2.new(1, 0, 0, 15);
             TextSize = 14;
             Text = Info.Text;
@@ -1654,7 +1633,7 @@ do
 
         Groupbox:AddBlank(1);
 
-        local TextBoxOuter = Library:Create('Frame', {
+        local TextBoxOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(1, -4, 0, 20);
@@ -1662,30 +1641,30 @@ do
             Parent = Container;
         });
 
-        local TextBoxInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
+        local TextBoxInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.MainColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = TextBoxOuter;
         });
 
-        Library:AddToRegistry(TextBoxInner, {
+        Jqz:AddToRegistry(TextBoxInner, {
             BackgroundColor3 = 'MainColor';
             BorderColor3 = 'OutlineColor';
         });
 
-        Library:OnHighlight(TextBoxOuter, TextBoxOuter,
+        Jqz:OnHighlight(TextBoxOuter, TextBoxOuter,
             { BorderColor3 = 'AccentColor' },
             { BorderColor3 = 'Black' }
         );
 
         if type(Info.Tooltip) == 'string' then
-            Library:AddToolTip(Info.Tooltip, TextBoxOuter)
+            Jqz:AddToolTip(Info.Tooltip, TextBoxOuter)
         end
 
-        Library:Create('UIGradient', {
+        Jqz:Create('UIGradient', {
             Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
                 ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
@@ -1694,7 +1673,7 @@ do
             Parent = TextBoxInner;
         });
 
-        local Container = Library:Create('Frame', {
+        local Container = Jqz:Create('Frame', {
             BackgroundTransparency = 1;
             ClipsDescendants = true;
 
@@ -1705,18 +1684,18 @@ do
             Parent = TextBoxInner;
         })
 
-        local Box = Library:Create('TextBox', {
+        local Box = Jqz:Create('TextBox', {
             BackgroundTransparency = 1;
 
             Position = UDim2.fromOffset(0, 0),
             Size = UDim2.fromScale(5, 1),
 
-            Font = Library.Font;
+            Font = Jqz.Font;
             PlaceholderColor3 = Color3.fromRGB(190, 190, 190);
             PlaceholderText = Info.Placeholder or '';
 
             Text = Info.Default or '';
-            TextColor3 = Library.FontColor;
+            TextColor3 = Jqz.FontColor;
             TextSize = 14;
             TextStrokeTransparency = 0;
             TextXAlignment = Enum.TextXAlignment.Left;
@@ -1725,7 +1704,7 @@ do
             Parent = Container;
         });
 
-        Library:ApplyTextStroke(Box);
+        Jqz:ApplyTextStroke(Box);
 
         function Textbox:SetValue(Text)
             if Info.MaxLength and #Text > Info.MaxLength then
@@ -1741,8 +1720,8 @@ do
             Textbox.Value = Text;
             Box.Text = Text;
 
-            Library:SafeCallback(Textbox.Callback, Textbox.Value);
-            Library:SafeCallback(Textbox.Changed, Textbox.Value);
+            Jqz:SafeCallback(Textbox.Callback, Textbox.Value);
+            Jqz:SafeCallback(Textbox.Changed, Textbox.Value);
         end;
 
         if Textbox.Finished then
@@ -1750,12 +1729,12 @@ do
                 if not enter then return end
 
                 Textbox:SetValue(Box.Text);
-                Library:AttemptSave();
+                Jqz:AttemptSave();
             end)
         else
             Box:GetPropertyChangedSignal('Text'):Connect(function()
                 Textbox:SetValue(Box.Text);
-                Library:AttemptSave();
+                Jqz:AttemptSave();
             end);
         end
 
@@ -1797,7 +1776,7 @@ do
         Box.FocusLost:Connect(Update)
         Box.Focused:Connect(Update)
 
-        Library:AddToRegistry(Box, {
+        Jqz:AddToRegistry(Box, {
             TextColor3 = 'FontColor';
         });
 
@@ -1829,7 +1808,7 @@ do
         local Groupbox = self;
         local Container = Groupbox.Container;
 
-        local ToggleOuter = Library:Create('Frame', {
+        local ToggleOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(0, 13, 0, 13);
@@ -1837,25 +1816,25 @@ do
             Parent = Container;
         });
 
-        Library:AddToRegistry(ToggleOuter, {
+        Jqz:AddToRegistry(ToggleOuter, {
             BorderColor3 = 'Black';
         });
 
-        local ToggleInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
+        local ToggleInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.MainColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = ToggleOuter;
         });
 
-        Library:AddToRegistry(ToggleInner, {
+        Jqz:AddToRegistry(ToggleInner, {
             BackgroundColor3 = 'MainColor';
             BorderColor3 = 'OutlineColor';
         });
 
-        local ToggleLabel = Library:CreateLabel({
+        local ToggleLabel = Jqz:CreateLabel({
             Size = UDim2.new(0, 216, 1, 0);
             Position = UDim2.new(1, 6, 0, 0);
             TextSize = 14;
@@ -1865,7 +1844,7 @@ do
             Parent = ToggleInner;
         });
 
-        Library:Create('UIListLayout', {
+        Jqz:Create('UIListLayout', {
             Padding = UDim.new(0, 4);
             FillDirection = Enum.FillDirection.Horizontal;
             HorizontalAlignment = Enum.HorizontalAlignment.Right;
@@ -1873,14 +1852,14 @@ do
             Parent = ToggleLabel;
         });
 
-        local ToggleRegion = Library:Create('Frame', {
+        local ToggleRegion = Jqz:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(0, 170, 1, 0);
             ZIndex = 8;
             Parent = ToggleOuter;
         });
 
-        Library:OnHighlight(ToggleRegion, ToggleOuter,
+        Jqz:OnHighlight(ToggleRegion, ToggleOuter,
             { BorderColor3 = 'AccentColor' },
             { BorderColor3 = 'Black' }
         );
@@ -1890,15 +1869,15 @@ do
         end;
 
         if type(Info.Tooltip) == 'string' then
-            Library:AddToolTip(Info.Tooltip, ToggleRegion)
+            Jqz:AddToolTip(Info.Tooltip, ToggleRegion)
         end
 
         function Toggle:Display()
-            ToggleInner.BackgroundColor3 = Toggle.Value and Library.AccentColor or Library.MainColor;
-            ToggleInner.BorderColor3 = Toggle.Value and Library.AccentColorDark or Library.OutlineColor;
+            ToggleInner.BackgroundColor3 = Toggle.Value and Jqz.AccentColor or Jqz.MainColor;
+            ToggleInner.BorderColor3 = Toggle.Value and Jqz.AccentColorDark or Jqz.OutlineColor;
 
-            Library.RegistryMap[ToggleInner].Properties.BackgroundColor3 = Toggle.Value and 'AccentColor' or 'MainColor';
-            Library.RegistryMap[ToggleInner].Properties.BorderColor3 = Toggle.Value and 'AccentColorDark' or 'OutlineColor';
+            Jqz.RegistryMap[ToggleInner].Properties.BackgroundColor3 = Toggle.Value and 'AccentColor' or 'MainColor';
+            Jqz.RegistryMap[ToggleInner].Properties.BorderColor3 = Toggle.Value and 'AccentColorDark' or 'OutlineColor';
         end;
 
         function Toggle:OnChanged(Func)
@@ -1919,22 +1898,22 @@ do
                 end
             end
 
-            Library:SafeCallback(Toggle.Callback, Toggle.Value);
-            Library:SafeCallback(Toggle.Changed, Toggle.Value);
-            Library:UpdateDependencyBoxes();
+            Jqz:SafeCallback(Toggle.Callback, Toggle.Value);
+            Jqz:SafeCallback(Toggle.Changed, Toggle.Value);
+            Jqz:UpdateDependencyBoxes();
         end;
 
         ToggleRegion.InputBegan:Connect(function(Input)
-            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
-                Toggle:SetValue(not Toggle.Value) -- Why was it not like this from the start?
-                Library:AttemptSave();
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Jqz:MouseIsOverOpenedFrame() then
+                Toggle:SetValue(not Toggle.Value)
+                Jqz:AttemptSave();
             end;
         end);
 
         if Toggle.Risky then
-            Library:RemoveFromRegistry(ToggleLabel)
-            ToggleLabel.TextColor3 = Library.RiskColor
-            Library:AddToRegistry(ToggleLabel, { TextColor3 = 'RiskColor' })
+            Jqz:RemoveFromRegistry(ToggleLabel)
+            ToggleLabel.TextColor3 = Jqz.RiskColor
+            Jqz:AddToRegistry(ToggleLabel, { TextColor3 = 'RiskColor' })
         end
 
         Toggle:Display();
@@ -1947,7 +1926,7 @@ do
 
         Toggles[Idx] = Toggle;
 
-        Library:UpdateDependencyBoxes();
+        Jqz:UpdateDependencyBoxes();
 
         return Toggle;
     end;
@@ -1973,7 +1952,7 @@ do
         local Container = Groupbox.Container;
 
         if not Info.Compact then
-            Library:CreateLabel({
+            Jqz:CreateLabel({
                 Size = UDim2.new(1, 0, 0, 10);
                 TextSize = 14;
                 Text = Info.Text;
@@ -1986,7 +1965,7 @@ do
             Groupbox:AddBlank(3);
         end
 
-        local SliderOuter = Library:Create('Frame', {
+        local SliderOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(1, -4, 0, 13);
@@ -1994,39 +1973,39 @@ do
             Parent = Container;
         });
 
-        Library:AddToRegistry(SliderOuter, {
+        Jqz:AddToRegistry(SliderOuter, {
             BorderColor3 = 'Black';
         });
 
-        local SliderInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
+        local SliderInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.MainColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = SliderOuter;
         });
 
-        Library:AddToRegistry(SliderInner, {
+        Jqz:AddToRegistry(SliderInner, {
             BackgroundColor3 = 'MainColor';
             BorderColor3 = 'OutlineColor';
         });
 
-        local Fill = Library:Create('Frame', {
-            BackgroundColor3 = Library.AccentColor;
-            BorderColor3 = Library.AccentColorDark;
+        local Fill = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.AccentColor;
+            BorderColor3 = Jqz.AccentColorDark;
             Size = UDim2.new(0, 0, 1, 0);
             ZIndex = 7;
             Parent = SliderInner;
         });
 
-        Library:AddToRegistry(Fill, {
+        Jqz:AddToRegistry(Fill, {
             BackgroundColor3 = 'AccentColor';
             BorderColor3 = 'AccentColorDark';
         });
 
-        local HideBorderRight = Library:Create('Frame', {
-            BackgroundColor3 = Library.AccentColor;
+        local HideBorderRight = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.AccentColor;
             BorderSizePixel = 0;
             Position = UDim2.new(1, 0, 0, 0);
             Size = UDim2.new(0, 1, 1, 0);
@@ -2034,11 +2013,11 @@ do
             Parent = Fill;
         });
 
-        Library:AddToRegistry(HideBorderRight, {
+        Jqz:AddToRegistry(HideBorderRight, {
             BackgroundColor3 = 'AccentColor';
         });
 
-        local DisplayLabel = Library:CreateLabel({
+        local DisplayLabel = Jqz:CreateLabel({
             Size = UDim2.new(1, 0, 1, 0);
             TextSize = 14;
             Text = 'Infinite';
@@ -2046,18 +2025,18 @@ do
             Parent = SliderInner;
         });
 
-        Library:OnHighlight(SliderOuter, SliderOuter,
+        Jqz:OnHighlight(SliderOuter, SliderOuter,
             { BorderColor3 = 'AccentColor' },
             { BorderColor3 = 'Black' }
         );
 
         if type(Info.Tooltip) == 'string' then
-            Library:AddToolTip(Info.Tooltip, SliderOuter)
+            Jqz:AddToolTip(Info.Tooltip, SliderOuter)
         end
 
         function Slider:UpdateColors()
-            Fill.BackgroundColor3 = Library.AccentColor;
-            Fill.BorderColor3 = Library.AccentColorDark;
+            Fill.BackgroundColor3 = Jqz.AccentColor;
+            Fill.BorderColor3 = Jqz.AccentColorDark;
         end;
 
         function Slider:Display()
@@ -2071,7 +2050,7 @@ do
                 DisplayLabel.Text = string.format('%s/%s', Slider.Value .. Suffix, Slider.Max .. Suffix);
             end
 
-            local X = math.ceil(Library:MapValue(Slider.Value, Slider.Min, Slider.Max, 0, Slider.MaxSize));
+            local X = math.ceil(Jqz:MapValue(Slider.Value, Slider.Min, Slider.Max, 0, Slider.MaxSize));
             Fill.Size = UDim2.new(0, X, 1, 0);
 
             HideBorderRight.Visible = not (X == Slider.MaxSize or X == 0);
@@ -2087,12 +2066,11 @@ do
                 return math.floor(Value);
             end;
 
-
             return tonumber(string.format('%.' .. Slider.Rounding .. 'f', Value))
         end;
 
         function Slider:GetValueFromXOffset(X)
-            return Round(Library:MapValue(X, 0, Slider.MaxSize, Slider.Min, Slider.Max));
+            return Round(Jqz:MapValue(X, 0, Slider.MaxSize, Slider.Min, Slider.Max));
         end;
 
         function Slider:SetValue(Str)
@@ -2107,12 +2085,12 @@ do
             Slider.Value = Num;
             Slider:Display();
 
-            Library:SafeCallback(Slider.Callback, Slider.Value);
-            Library:SafeCallback(Slider.Changed, Slider.Value);
+            Jqz:SafeCallback(Slider.Callback, Slider.Value);
+            Jqz:SafeCallback(Slider.Changed, Slider.Value);
         end;
 
         SliderInner.InputBegan:Connect(function(Input)
-            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Jqz:MouseIsOverOpenedFrame() then
                 local mPos = Mouse.X;
                 local gPos = Fill.Size.X.Offset;
                 local Diff = mPos - (Fill.AbsolutePosition.X + gPos);
@@ -2128,14 +2106,14 @@ do
                     Slider:Display();
 
                     if nValue ~= OldValue then
-                        Library:SafeCallback(Slider.Callback, Slider.Value);
-                        Library:SafeCallback(Slider.Changed, Slider.Value);
+                        Jqz:SafeCallback(Slider.Callback, Slider.Value);
+                        Jqz:SafeCallback(Slider.Changed, Slider.Value);
                     end;
 
                     RenderStepped:Wait();
                 end;
 
-                Library:AttemptSave();
+                Jqz:AttemptSave();
             end;
         end);
 
@@ -2179,7 +2157,7 @@ do
         local RelativeOffset = 0;
 
         if not Info.Compact then
-            local DropdownLabel = Library:CreateLabel({
+            local DropdownLabel = Jqz:CreateLabel({
                 Size = UDim2.new(1, 0, 0, 10);
                 TextSize = 14;
                 Text = Info.Text;
@@ -2198,7 +2176,7 @@ do
             end;
         end;
 
-        local DropdownOuter = Library:Create('Frame', {
+        local DropdownOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(1, -4, 0, 20);
@@ -2206,25 +2184,25 @@ do
             Parent = Container;
         });
 
-        Library:AddToRegistry(DropdownOuter, {
+        Jqz:AddToRegistry(DropdownOuter, {
             BorderColor3 = 'Black';
         });
 
-        local DropdownInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
+        local DropdownInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.MainColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = DropdownOuter;
         });
 
-        Library:AddToRegistry(DropdownInner, {
+        Jqz:AddToRegistry(DropdownInner, {
             BackgroundColor3 = 'MainColor';
             BorderColor3 = 'OutlineColor';
         });
 
-        Library:Create('UIGradient', {
+        Jqz:Create('UIGradient', {
             Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
                 ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
@@ -2233,7 +2211,7 @@ do
             Parent = DropdownInner;
         });
 
-        local DropdownArrow = Library:Create('ImageLabel', {
+        local DropdownArrow = Jqz:Create('ImageLabel', {
             AnchorPoint = Vector2.new(0, 0.5);
             BackgroundTransparency = 1;
             Position = UDim2.new(1, -16, 0.5, 0);
@@ -2243,7 +2221,7 @@ do
             Parent = DropdownInner;
         });
 
-        local ItemList = Library:CreateLabel({
+        local ItemList = Jqz:CreateLabel({
             Position = UDim2.new(0, 5, 0, 0);
             Size = UDim2.new(1, -5, 1, 0);
             TextSize = 14;
@@ -2254,18 +2232,18 @@ do
             Parent = DropdownInner;
         });
 
-        Library:OnHighlight(DropdownOuter, DropdownOuter,
+        Jqz:OnHighlight(DropdownOuter, DropdownOuter,
             { BorderColor3 = 'AccentColor' },
             { BorderColor3 = 'Black' }
         );
 
         if type(Info.Tooltip) == 'string' then
-            Library:AddToolTip(Info.Tooltip, DropdownOuter)
+            Jqz:AddToolTip(Info.Tooltip, DropdownOuter)
         end
 
         local MAX_DROPDOWN_ITEMS = 8;
 
-        local ListOuter = Library:Create('Frame', {
+        local ListOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             ZIndex = 20;
@@ -2286,9 +2264,9 @@ do
 
         DropdownOuter:GetPropertyChangedSignal('AbsolutePosition'):Connect(RecalculateListPosition);
 
-        local ListInner = Library:Create('Frame', {
-            BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
+        local ListInner = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.MainColor;
+            BorderColor3 = Jqz.OutlineColor;
             BorderMode = Enum.BorderMode.Inset;
             BorderSizePixel = 0;
             Size = UDim2.new(1, 0, 1, 0);
@@ -2296,12 +2274,12 @@ do
             Parent = ListOuter;
         });
 
-        Library:AddToRegistry(ListInner, {
+        Jqz:AddToRegistry(ListInner, {
             BackgroundColor3 = 'MainColor';
             BorderColor3 = 'OutlineColor';
         });
 
-        local Scrolling = Library:Create('ScrollingFrame', {
+        local Scrolling = Jqz:Create('ScrollingFrame', {
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             CanvasSize = UDim2.new(0, 0, 0, 0);
@@ -2313,14 +2291,14 @@ do
             BottomImage = 'rbxasset://textures/ui/Scroll/scroll-middle.png',
 
             ScrollBarThickness = 3,
-            ScrollBarImageColor3 = Library.AccentColor,
+            ScrollBarImageColor3 = Jqz.AccentColor,
         });
 
-        Library:AddToRegistry(Scrolling, {
+        Jqz:AddToRegistry(Scrolling, {
             ScrollBarImageColor3 = 'AccentColor'
         })
 
-        Library:Create('UIListLayout', {
+        Jqz:Create('UIListLayout', {
             Padding = UDim.new(0, 0);
             FillDirection = Enum.FillDirection.Vertical;
             SortOrder = Enum.SortOrder.LayoutOrder;
@@ -2377,9 +2355,9 @@ do
 
                 Count = Count + 1;
 
-                local Button = Library:Create('Frame', {
-                    BackgroundColor3 = Library.MainColor;
-                    BorderColor3 = Library.OutlineColor;
+                local Button = Jqz:Create('Frame', {
+                    BackgroundColor3 = Jqz.MainColor;
+                    BorderColor3 = Jqz.OutlineColor;
                     BorderMode = Enum.BorderMode.Middle;
                     Size = UDim2.new(1, -1, 0, 20);
                     ZIndex = 23;
@@ -2387,12 +2365,12 @@ do
                     Parent = Scrolling;
                 });
 
-                Library:AddToRegistry(Button, {
+                Jqz:AddToRegistry(Button, {
                     BackgroundColor3 = 'MainColor';
                     BorderColor3 = 'OutlineColor';
                 });
 
-                local ButtonLabel = Library:CreateLabel({
+                local ButtonLabel = Jqz:CreateLabel({
                     Active = false;
                     Size = UDim2.new(1, -6, 1, 0);
                     Position = UDim2.new(0, 6, 0, 0);
@@ -2403,7 +2381,7 @@ do
                     Parent = Button;
                 });
 
-                Library:OnHighlight(Button, Button,
+                Jqz:OnHighlight(Button, Button,
                     { BorderColor3 = 'AccentColor', ZIndex = 24 },
                     { BorderColor3 = 'OutlineColor', ZIndex = 23 }
                 );
@@ -2423,8 +2401,8 @@ do
                         Selected = Dropdown.Value == Value;
                     end;
 
-                    ButtonLabel.TextColor3 = Selected and Library.AccentColor or Library.FontColor;
-                    Library.RegistryMap[ButtonLabel].Properties.TextColor3 = Selected and 'AccentColor' or 'FontColor';
+                    ButtonLabel.TextColor3 = Selected and Jqz.AccentColor or Jqz.FontColor;
+                    Jqz.RegistryMap[ButtonLabel].Properties.TextColor3 = Selected and 'AccentColor' or 'FontColor';
                 end;
 
                 ButtonLabel.InputBegan:Connect(function(Input)
@@ -2458,10 +2436,10 @@ do
                             Table:UpdateButton();
                             Dropdown:Display();
 
-                            Library:SafeCallback(Dropdown.Callback, Dropdown.Value);
-                            Library:SafeCallback(Dropdown.Changed, Dropdown.Value);
+                            Jqz:SafeCallback(Dropdown.Callback, Dropdown.Value);
+                            Jqz:SafeCallback(Dropdown.Changed, Dropdown.Value);
 
-                            Library:AttemptSave();
+                            Jqz:AttemptSave();
                         end;
                     end;
                 end);
@@ -2488,13 +2466,13 @@ do
 
         function Dropdown:OpenDropdown()
             ListOuter.Visible = true;
-            Library.OpenedFrames[ListOuter] = true;
+            Jqz.OpenedFrames[ListOuter] = true;
             DropdownArrow.Rotation = 180;
         end;
 
         function Dropdown:CloseDropdown()
             ListOuter.Visible = false;
-            Library.OpenedFrames[ListOuter] = nil;
+            Jqz.OpenedFrames[ListOuter] = nil;
             DropdownArrow.Rotation = 0;
         end;
 
@@ -2524,12 +2502,12 @@ do
 
             Dropdown:BuildDropdownList();
 
-            Library:SafeCallback(Dropdown.Callback, Dropdown.Value);
-            Library:SafeCallback(Dropdown.Changed, Dropdown.Value);
+            Jqz:SafeCallback(Dropdown.Callback, Dropdown.Value);
+            Jqz:SafeCallback(Dropdown.Changed, Dropdown.Value);
         end;
 
         DropdownOuter.InputBegan:Connect(function(Input)
-            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Jqz:MouseIsOverOpenedFrame() then
                 if ListOuter.Visible then
                     Dropdown:CloseDropdown();
                 else
@@ -2599,25 +2577,25 @@ do
         local Depbox = {
             Dependencies = {};
         };
-        
+
         local Groupbox = self;
         local Container = Groupbox.Container;
 
-        local Holder = Library:Create('Frame', {
+        local Holder = Jqz:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(1, 0, 0, 0);
             Visible = false;
             Parent = Container;
         });
 
-        local Frame = Library:Create('Frame', {
+        local Frame = Jqz:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(1, 0, 1, 0);
             Visible = true;
             Parent = Holder;
         });
 
-        local Layout = Library:Create('UIListLayout', {
+        local Layout = Jqz:Create('UIListLayout', {
             FillDirection = Enum.FillDirection.Vertical;
             SortOrder = Enum.SortOrder.LayoutOrder;
             Parent = Frame;
@@ -2667,7 +2645,7 @@ do
 
         setmetatable(Depbox, BaseGroupbox);
 
-        table.insert(Library.DependencyBoxes, Depbox);
+        table.insert(Jqz.DependencyBoxes, Depbox);
 
         return Depbox;
     end;
@@ -2680,7 +2658,7 @@ end;
 
 -- < Create other UI elements >
 do
-    Library.NotificationArea = Library:Create('Frame', {
+    Jqz.NotificationArea = Jqz:Create('Frame', {
         BackgroundTransparency = 1;
         Position = UDim2.new(0, 0, 0, 40);
         Size = UDim2.new(0, 300, 0, 200);
@@ -2688,14 +2666,14 @@ do
         Parent = ScreenGui;
     });
 
-    Library:Create('UIListLayout', {
+    Jqz:Create('UIListLayout', {
         Padding = UDim.new(0, 4);
         FillDirection = Enum.FillDirection.Vertical;
         SortOrder = Enum.SortOrder.LayoutOrder;
-        Parent = Library.NotificationArea;
+        Parent = Jqz.NotificationArea;
     });
 
-    local WatermarkOuter = Library:Create('Frame', {
+    local WatermarkOuter = Jqz:Create('Frame', {
         BorderColor3 = Color3.new(0, 0, 0);
         Position = UDim2.new(0, 100, 0, -25);
         Size = UDim2.new(0, 213, 0, 20);
@@ -2704,20 +2682,20 @@ do
         Parent = ScreenGui;
     });
 
-    local WatermarkInner = Library:Create('Frame', {
-        BackgroundColor3 = Library.MainColor;
-        BorderColor3 = Library.AccentColor;
+    local WatermarkInner = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.MainColor;
+        BorderColor3 = Jqz.AccentColor;
         BorderMode = Enum.BorderMode.Inset;
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 201;
         Parent = WatermarkOuter;
     });
 
-    Library:AddToRegistry(WatermarkInner, {
+    Jqz:AddToRegistry(WatermarkInner, {
         BorderColor3 = 'AccentColor';
     });
 
-    local InnerFrame = Library:Create('Frame', {
+    local InnerFrame = Jqz:Create('Frame', {
         BackgroundColor3 = Color3.new(1, 1, 1);
         BorderSizePixel = 0;
         Position = UDim2.new(0, 1, 0, 1);
@@ -2726,25 +2704,25 @@ do
         Parent = WatermarkInner;
     });
 
-    local Gradient = Library:Create('UIGradient', {
+    local Gradient = Jqz:Create('UIGradient', {
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Library:GetDarkerColor(Library.MainColor)),
-            ColorSequenceKeypoint.new(1, Library.MainColor),
+            ColorSequenceKeypoint.new(0, Jqz:GetDarkerColor(Jqz.MainColor)),
+            ColorSequenceKeypoint.new(1, Jqz.MainColor),
         });
         Rotation = -90;
         Parent = InnerFrame;
     });
 
-    Library:AddToRegistry(Gradient, {
+    Jqz:AddToRegistry(Gradient, {
         Color = function()
             return ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Library:GetDarkerColor(Library.MainColor)),
-                ColorSequenceKeypoint.new(1, Library.MainColor),
+                ColorSequenceKeypoint.new(0, Jqz:GetDarkerColor(Jqz.MainColor)),
+                ColorSequenceKeypoint.new(1, Jqz.MainColor),
             });
         end
     });
 
-    local WatermarkLabel = Library:CreateLabel({
+    local WatermarkLabel = Jqz:CreateLabel({
         Position = UDim2.new(0, 5, 0, 0);
         Size = UDim2.new(1, -4, 1, 0);
         TextSize = 14;
@@ -2753,13 +2731,11 @@ do
         Parent = InnerFrame;
     });
 
-    Library.Watermark = WatermarkOuter;
-    Library.WatermarkText = WatermarkLabel;
-    Library:MakeDraggable(Library.Watermark);
+    Jqz.Watermark = WatermarkOuter;
+    Jqz.WatermarkText = WatermarkLabel;
+    Jqz:MakeDraggable(Jqz.Watermark);
 
-
-
-    local KeybindOuter = Library:Create('Frame', {
+    local KeybindOuter = Jqz:Create('Frame', {
         AnchorPoint = Vector2.new(0, 0.5);
         BorderColor3 = Color3.new(0, 0, 0);
         Position = UDim2.new(0, 10, 0.5, 0);
@@ -2769,33 +2745,33 @@ do
         Parent = ScreenGui;
     });
 
-    local KeybindInner = Library:Create('Frame', {
-        BackgroundColor3 = Library.MainColor;
-        BorderColor3 = Library.OutlineColor;
+    local KeybindInner = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.MainColor;
+        BorderColor3 = Jqz.OutlineColor;
         BorderMode = Enum.BorderMode.Inset;
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 101;
         Parent = KeybindOuter;
     });
 
-    Library:AddToRegistry(KeybindInner, {
+    Jqz:AddToRegistry(KeybindInner, {
         BackgroundColor3 = 'MainColor';
         BorderColor3 = 'OutlineColor';
     }, true);
 
-    local ColorFrame = Library:Create('Frame', {
-        BackgroundColor3 = Library.AccentColor;
+    local ColorFrame = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.AccentColor;
         BorderSizePixel = 0;
         Size = UDim2.new(1, 0, 0, 2);
         ZIndex = 102;
         Parent = KeybindInner;
     });
 
-    Library:AddToRegistry(ColorFrame, {
+    Jqz:AddToRegistry(ColorFrame, {
         BackgroundColor3 = 'AccentColor';
     }, true);
 
-    local KeybindLabel = Library:CreateLabel({
+    local KeybindLabel = Jqz:CreateLabel({
         Size = UDim2.new(1, 0, 0, 20);
         Position = UDim2.fromOffset(5, 2),
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -2805,7 +2781,7 @@ do
         Parent = KeybindInner;
     });
 
-    local KeybindContainer = Library:Create('Frame', {
+    local KeybindContainer = Jqz:Create('Frame', {
         BackgroundTransparency = 1;
         Size = UDim2.new(1, 0, 1, -20);
         Position = UDim2.new(0, 0, 0, 20);
@@ -2813,63 +2789,63 @@ do
         Parent = KeybindInner;
     });
 
-    Library:Create('UIListLayout', {
+    Jqz:Create('UIListLayout', {
         FillDirection = Enum.FillDirection.Vertical;
         SortOrder = Enum.SortOrder.LayoutOrder;
         Parent = KeybindContainer;
     });
 
-    Library:Create('UIPadding', {
+    Jqz:Create('UIPadding', {
         PaddingLeft = UDim.new(0, 5),
         Parent = KeybindContainer,
     })
 
-    Library.KeybindFrame = KeybindOuter;
-    Library.KeybindContainer = KeybindContainer;
-    Library:MakeDraggable(KeybindOuter);
+    Jqz.KeybindFrame = KeybindOuter;
+    Jqz.KeybindContainer = KeybindContainer;
+    Jqz:MakeDraggable(KeybindOuter);
 end;
 
-function Library:SetWatermarkVisibility(Bool)
-    Library.Watermark.Visible = Bool;
+function Jqz:SetWatermarkVisibility(Bool)
+    Jqz.Watermark.Visible = Bool;
 end;
 
-function Library:SetWatermark(Text)
-    local X, Y = Library:GetTextBounds(Text, Library.Font, 14);
-    Library.Watermark.Size = UDim2.new(0, X + 15, 0, (Y * 1.5) + 3);
-    Library:SetWatermarkVisibility(true)
+function Jqz:SetWatermark(Text)
+    local X, Y = Jqz:GetTextBounds(Text, Jqz.Font, 14);
+    Jqz.Watermark.Size = UDim2.new(0, X + 15, 0, (Y * 1.5) + 3);
+    Jqz:SetWatermarkVisibility(true)
 
-    Library.WatermarkText.Text = Text;
+    Jqz.WatermarkText.Text = Text;
 end;
 
-function Library:Notify(Text, Time)
-    local XSize, YSize = Library:GetTextBounds(Text, Library.Font, 14);
+function Jqz:Notify(Text, Time)
+    local XSize, YSize = Jqz:GetTextBounds(Text, Jqz.Font, 14);
 
     YSize = YSize + 7
 
-    local NotifyOuter = Library:Create('Frame', {
+    local NotifyOuter = Jqz:Create('Frame', {
         BorderColor3 = Color3.new(0, 0, 0);
         Position = UDim2.new(0, 100, 0, 10);
         Size = UDim2.new(0, 0, 0, YSize);
         ClipsDescendants = true;
         ZIndex = 100;
-        Parent = Library.NotificationArea;
+        Parent = Jqz.NotificationArea;
     });
 
-    local NotifyInner = Library:Create('Frame', {
-        BackgroundColor3 = Library.MainColor;
-        BorderColor3 = Library.OutlineColor;
+    local NotifyInner = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.MainColor;
+        BorderColor3 = Jqz.OutlineColor;
         BorderMode = Enum.BorderMode.Inset;
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 101;
         Parent = NotifyOuter;
     });
 
-    Library:AddToRegistry(NotifyInner, {
+    Jqz:AddToRegistry(NotifyInner, {
         BackgroundColor3 = 'MainColor';
         BorderColor3 = 'OutlineColor';
     }, true);
 
-    local InnerFrame = Library:Create('Frame', {
+    local InnerFrame = Jqz:Create('Frame', {
         BackgroundColor3 = Color3.new(1, 1, 1);
         BorderSizePixel = 0;
         Position = UDim2.new(0, 1, 0, 1);
@@ -2878,25 +2854,25 @@ function Library:Notify(Text, Time)
         Parent = NotifyInner;
     });
 
-    local Gradient = Library:Create('UIGradient', {
+    local Gradient = Jqz:Create('UIGradient', {
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Library:GetDarkerColor(Library.MainColor)),
-            ColorSequenceKeypoint.new(1, Library.MainColor),
+            ColorSequenceKeypoint.new(0, Jqz:GetDarkerColor(Jqz.MainColor)),
+            ColorSequenceKeypoint.new(1, Jqz.MainColor),
         });
         Rotation = -90;
         Parent = InnerFrame;
     });
 
-    Library:AddToRegistry(Gradient, {
+    Jqz:AddToRegistry(Gradient, {
         Color = function()
             return ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Library:GetDarkerColor(Library.MainColor)),
-                ColorSequenceKeypoint.new(1, Library.MainColor),
+                ColorSequenceKeypoint.new(0, Jqz:GetDarkerColor(Jqz.MainColor)),
+                ColorSequenceKeypoint.new(1, Jqz.MainColor),
             });
         end
     });
 
-    local NotifyLabel = Library:CreateLabel({
+    local NotifyLabel = Jqz:CreateLabel({
         Position = UDim2.new(0, 4, 0, 0);
         Size = UDim2.new(1, -4, 1, 0);
         Text = Text;
@@ -2906,8 +2882,8 @@ function Library:Notify(Text, Time)
         Parent = InnerFrame;
     });
 
-    local LeftColor = Library:Create('Frame', {
-        BackgroundColor3 = Library.AccentColor;
+    local LeftColor = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.AccentColor;
         BorderSizePixel = 0;
         Position = UDim2.new(0, -1, 0, -1);
         Size = UDim2.new(0, 3, 1, 2);
@@ -2915,7 +2891,7 @@ function Library:Notify(Text, Time)
         Parent = NotifyOuter;
     });
 
-    Library:AddToRegistry(LeftColor, {
+    Jqz:AddToRegistry(LeftColor, {
         BackgroundColor3 = 'AccentColor';
     }, true);
 
@@ -2932,7 +2908,7 @@ function Library:Notify(Text, Time)
     end);
 end;
 
-function Library:CreateWindow(...)
+function Jqz:CreateWindow(...)
     local Arguments = { ... }
     local Config = { AnchorPoint = Vector2.zero }
 
@@ -2943,7 +2919,7 @@ function Library:CreateWindow(...)
         Config.AutoShow = Arguments[2] or false;
     end
 
-    if type(Config.Title) ~= 'string' then Config.Title = 'No title' end
+    if type(Config.Title) ~= 'string' then Config.Title = 'Jqz' end
     if type(Config.TabPadding) ~= 'number' then Config.TabPadding = 0 end
     if type(Config.MenuFadeTime) ~= 'number' then Config.MenuFadeTime = 0.2 end
 
@@ -2959,7 +2935,7 @@ function Library:CreateWindow(...)
         Tabs = {};
     };
 
-    local Outer = Library:Create('Frame', {
+    local Outer = Jqz:Create('Frame', {
         AnchorPoint = Config.AnchorPoint,
         BackgroundColor3 = Color3.new(0, 0, 0);
         BorderSizePixel = 0;
@@ -2970,11 +2946,11 @@ function Library:CreateWindow(...)
         Parent = ScreenGui;
     });
 
-    Library:MakeDraggable(Outer, 25);
+    Jqz:MakeDraggable(Outer, 25);
 
-    local Inner = Library:Create('Frame', {
-        BackgroundColor3 = Library.MainColor;
-        BorderColor3 = Library.AccentColor;
+    local Inner = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.MainColor;
+        BorderColor3 = Jqz.AccentColor;
         BorderMode = Enum.BorderMode.Inset;
         Position = UDim2.new(0, 1, 0, 1);
         Size = UDim2.new(1, -2, 1, -2);
@@ -2982,12 +2958,12 @@ function Library:CreateWindow(...)
         Parent = Outer;
     });
 
-    Library:AddToRegistry(Inner, {
+    Jqz:AddToRegistry(Inner, {
         BackgroundColor3 = 'MainColor';
         BorderColor3 = 'AccentColor';
     });
 
-    local WindowLabel = Library:CreateLabel({
+    local WindowLabel = Jqz:CreateLabel({
         Position = UDim2.new(0, 7, 0, 0);
         Size = UDim2.new(0, 0, 0, 25);
         Text = Config.Title or '';
@@ -2996,22 +2972,22 @@ function Library:CreateWindow(...)
         Parent = Inner;
     });
 
-    local MainSectionOuter = Library:Create('Frame', {
-        BackgroundColor3 = Library.BackgroundColor;
-        BorderColor3 = Library.OutlineColor;
+    local MainSectionOuter = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.BackgroundColor;
+        BorderColor3 = Jqz.OutlineColor;
         Position = UDim2.new(0, 8, 0, 25);
         Size = UDim2.new(1, -16, 1, -33);
         ZIndex = 1;
         Parent = Inner;
     });
 
-    Library:AddToRegistry(MainSectionOuter, {
+    Jqz:AddToRegistry(MainSectionOuter, {
         BackgroundColor3 = 'BackgroundColor';
         BorderColor3 = 'OutlineColor';
     });
 
-    local MainSectionInner = Library:Create('Frame', {
-        BackgroundColor3 = Library.BackgroundColor;
+    local MainSectionInner = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.BackgroundColor;
         BorderColor3 = Color3.new(0, 0, 0);
         BorderMode = Enum.BorderMode.Inset;
         Position = UDim2.new(0, 0, 0, 0);
@@ -3020,11 +2996,11 @@ function Library:CreateWindow(...)
         Parent = MainSectionOuter;
     });
 
-    Library:AddToRegistry(MainSectionInner, {
+    Jqz:AddToRegistry(MainSectionInner, {
         BackgroundColor3 = 'BackgroundColor';
     });
 
-    local TabArea = Library:Create('Frame', {
+    local TabArea = Jqz:Create('Frame', {
         BackgroundTransparency = 1;
         Position = UDim2.new(0, 8, 0, 8);
         Size = UDim2.new(1, -16, 0, 21);
@@ -3032,24 +3008,23 @@ function Library:CreateWindow(...)
         Parent = MainSectionInner;
     });
 
-    local TabListLayout = Library:Create('UIListLayout', {
+    local TabListLayout = Jqz:Create('UIListLayout', {
         Padding = UDim.new(0, Config.TabPadding);
         FillDirection = Enum.FillDirection.Horizontal;
         SortOrder = Enum.SortOrder.LayoutOrder;
         Parent = TabArea;
     });
 
-    local TabContainer = Library:Create('Frame', {
-        BackgroundColor3 = Library.MainColor;
-        BorderColor3 = Library.OutlineColor;
+    local TabContainer = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.MainColor;
+        BorderColor3 = Jqz.OutlineColor;
         Position = UDim2.new(0, 8, 0, 30);
         Size = UDim2.new(1, -16, 1, -38);
         ZIndex = 2;
         Parent = MainSectionInner;
     });
-    
 
-    Library:AddToRegistry(TabContainer, {
+    Jqz:AddToRegistry(TabContainer, {
         BackgroundColor3 = 'MainColor';
         BorderColor3 = 'OutlineColor';
     });
@@ -3064,22 +3039,22 @@ function Library:CreateWindow(...)
             Tabboxes = {};
         };
 
-        local TabButtonWidth = Library:GetTextBounds(Name, Library.Font, 16);
+        local TabButtonWidth = Jqz:GetTextBounds(Name, Jqz.Font, 16);
 
-        local TabButton = Library:Create('Frame', {
-            BackgroundColor3 = Library.BackgroundColor;
-            BorderColor3 = Library.OutlineColor;
+        local TabButton = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.BackgroundColor;
+            BorderColor3 = Jqz.OutlineColor;
             Size = UDim2.new(0, TabButtonWidth + 8 + 4, 1, 0);
             ZIndex = 1;
             Parent = TabArea;
         });
 
-        Library:AddToRegistry(TabButton, {
+        Jqz:AddToRegistry(TabButton, {
             BackgroundColor3 = 'BackgroundColor';
             BorderColor3 = 'OutlineColor';
         });
 
-        local TabButtonLabel = Library:CreateLabel({
+        local TabButtonLabel = Jqz:CreateLabel({
             Position = UDim2.new(0, 0, 0, 0);
             Size = UDim2.new(1, 0, 1, -1);
             Text = Name;
@@ -3087,8 +3062,8 @@ function Library:CreateWindow(...)
             Parent = TabButton;
         });
 
-        local Blocker = Library:Create('Frame', {
-            BackgroundColor3 = Library.MainColor;
+        local Blocker = Jqz:Create('Frame', {
+            BackgroundColor3 = Jqz.MainColor;
             BorderSizePixel = 0;
             Position = UDim2.new(0, 0, 1, 0);
             Size = UDim2.new(1, 0, 0, 1);
@@ -3097,11 +3072,11 @@ function Library:CreateWindow(...)
             Parent = TabButton;
         });
 
-        Library:AddToRegistry(Blocker, {
+        Jqz:AddToRegistry(Blocker, {
             BackgroundColor3 = 'MainColor';
         });
 
-        local TabFrame = Library:Create('Frame', {
+        local TabFrame = Jqz:Create('Frame', {
             Name = 'TabFrame',
             BackgroundTransparency = 1;
             Position = UDim2.new(0, 0, 0, 0);
@@ -3111,7 +3086,7 @@ function Library:CreateWindow(...)
             Parent = TabContainer;
         });
 
-        local LeftSide = Library:Create('ScrollingFrame', {
+        local LeftSide = Jqz:Create('ScrollingFrame', {
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0, 8 - 1, 0, 8 - 1);
@@ -3124,7 +3099,7 @@ function Library:CreateWindow(...)
             Parent = TabFrame;
         });
 
-        local RightSide = Library:Create('ScrollingFrame', {
+        local RightSide = Jqz:Create('ScrollingFrame', {
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0.5, 4 + 1, 0, 8 - 1);
@@ -3137,7 +3112,7 @@ function Library:CreateWindow(...)
             Parent = TabFrame;
         });
 
-        Library:Create('UIListLayout', {
+        Jqz:Create('UIListLayout', {
             Padding = UDim.new(0, 8);
             FillDirection = Enum.FillDirection.Vertical;
             SortOrder = Enum.SortOrder.LayoutOrder;
@@ -3145,7 +3120,7 @@ function Library:CreateWindow(...)
             Parent = LeftSide;
         });
 
-        Library:Create('UIListLayout', {
+        Jqz:Create('UIListLayout', {
             Padding = UDim.new(0, 8);
             FillDirection = Enum.FillDirection.Vertical;
             SortOrder = Enum.SortOrder.LayoutOrder;
@@ -3165,15 +3140,15 @@ function Library:CreateWindow(...)
             end;
 
             Blocker.BackgroundTransparency = 0;
-            TabButton.BackgroundColor3 = Library.MainColor;
-            Library.RegistryMap[TabButton].Properties.BackgroundColor3 = 'MainColor';
+            TabButton.BackgroundColor3 = Jqz.MainColor;
+            Jqz.RegistryMap[TabButton].Properties.BackgroundColor3 = 'MainColor';
             TabFrame.Visible = true;
         end;
 
         function Tab:HideTab()
             Blocker.BackgroundTransparency = 1;
-            TabButton.BackgroundColor3 = Library.BackgroundColor;
-            Library.RegistryMap[TabButton].Properties.BackgroundColor3 = 'BackgroundColor';
+            TabButton.BackgroundColor3 = Jqz.BackgroundColor;
+            Jqz.RegistryMap[TabButton].Properties.BackgroundColor3 = 'BackgroundColor';
             TabFrame.Visible = false;
         end;
 
@@ -3185,47 +3160,46 @@ function Library:CreateWindow(...)
         function Tab:AddGroupbox(Info)
             local Groupbox = {};
 
-            local BoxOuter = Library:Create('Frame', {
-                BackgroundColor3 = Library.BackgroundColor;
-                BorderColor3 = Library.OutlineColor;
+            local BoxOuter = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.BackgroundColor;
+                BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, 0, 0, 507 + 2);
                 ZIndex = 2;
                 Parent = Info.Side == 1 and LeftSide or RightSide;
             });
 
-            Library:AddToRegistry(BoxOuter, {
+            Jqz:AddToRegistry(BoxOuter, {
                 BackgroundColor3 = 'BackgroundColor';
                 BorderColor3 = 'OutlineColor';
             });
 
-            local BoxInner = Library:Create('Frame', {
-                BackgroundColor3 = Library.BackgroundColor;
+            local BoxInner = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.BackgroundColor;
                 BorderColor3 = Color3.new(0, 0, 0);
-                -- BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, -2, 1, -2);
                 Position = UDim2.new(0, 1, 0, 1);
                 ZIndex = 4;
                 Parent = BoxOuter;
             });
 
-            Library:AddToRegistry(BoxInner, {
+            Jqz:AddToRegistry(BoxInner, {
                 BackgroundColor3 = 'BackgroundColor';
             });
 
-            local Highlight = Library:Create('Frame', {
-                BackgroundColor3 = Library.AccentColor;
+            local Highlight = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.AccentColor;
                 BorderSizePixel = 0;
                 Size = UDim2.new(1, 0, 0, 2);
                 ZIndex = 5;
                 Parent = BoxInner;
             });
 
-            Library:AddToRegistry(Highlight, {
+            Jqz:AddToRegistry(Highlight, {
                 BackgroundColor3 = 'AccentColor';
             });
 
-            local GroupboxLabel = Library:CreateLabel({
+            local GroupboxLabel = Jqz:CreateLabel({
                 Size = UDim2.new(1, 0, 0, 18);
                 Position = UDim2.new(0, 4, 0, 2);
                 TextSize = 14;
@@ -3235,7 +3209,7 @@ function Library:CreateWindow(...)
                 Parent = BoxInner;
             });
 
-            local Container = Library:Create('Frame', {
+            local Container = Jqz:Create('Frame', {
                 BackgroundTransparency = 1;
                 Position = UDim2.new(0, 4, 0, 20);
                 Size = UDim2.new(1, -4, 1, -20);
@@ -3243,7 +3217,7 @@ function Library:CreateWindow(...)
                 Parent = BoxInner;
             });
 
-            Library:Create('UIListLayout', {
+            Jqz:Create('UIListLayout', {
                 FillDirection = Enum.FillDirection.Vertical;
                 SortOrder = Enum.SortOrder.LayoutOrder;
                 Parent = Container;
@@ -3285,47 +3259,46 @@ function Library:CreateWindow(...)
                 Tabs = {};
             };
 
-            local BoxOuter = Library:Create('Frame', {
-                BackgroundColor3 = Library.BackgroundColor;
-                BorderColor3 = Library.OutlineColor;
+            local BoxOuter = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.BackgroundColor;
+                BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, 0, 0, 0);
                 ZIndex = 2;
                 Parent = Info.Side == 1 and LeftSide or RightSide;
             });
 
-            Library:AddToRegistry(BoxOuter, {
+            Jqz:AddToRegistry(BoxOuter, {
                 BackgroundColor3 = 'BackgroundColor';
                 BorderColor3 = 'OutlineColor';
             });
 
-            local BoxInner = Library:Create('Frame', {
-                BackgroundColor3 = Library.BackgroundColor;
+            local BoxInner = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.BackgroundColor;
                 BorderColor3 = Color3.new(0, 0, 0);
-                -- BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, -2, 1, -2);
                 Position = UDim2.new(0, 1, 0, 1);
                 ZIndex = 4;
                 Parent = BoxOuter;
             });
 
-            Library:AddToRegistry(BoxInner, {
+            Jqz:AddToRegistry(BoxInner, {
                 BackgroundColor3 = 'BackgroundColor';
             });
 
-            local Highlight = Library:Create('Frame', {
-                BackgroundColor3 = Library.AccentColor;
+            local Highlight = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.AccentColor;
                 BorderSizePixel = 0;
                 Size = UDim2.new(1, 0, 0, 2);
                 ZIndex = 10;
                 Parent = BoxInner;
             });
 
-            Library:AddToRegistry(Highlight, {
+            Jqz:AddToRegistry(Highlight, {
                 BackgroundColor3 = 'AccentColor';
             });
 
-            local TabboxButtons = Library:Create('Frame', {
+            local TabboxButtons = Jqz:Create('Frame', {
                 BackgroundTransparency = 1;
                 Position = UDim2.new(0, 0, 0, 1);
                 Size = UDim2.new(1, 0, 0, 18);
@@ -3333,7 +3306,7 @@ function Library:CreateWindow(...)
                 Parent = BoxInner;
             });
 
-            Library:Create('UIListLayout', {
+            Jqz:Create('UIListLayout', {
                 FillDirection = Enum.FillDirection.Horizontal;
                 HorizontalAlignment = Enum.HorizontalAlignment.Left;
                 SortOrder = Enum.SortOrder.LayoutOrder;
@@ -3343,19 +3316,19 @@ function Library:CreateWindow(...)
             function Tabbox:AddTab(Name)
                 local Tab = {};
 
-                local Button = Library:Create('Frame', {
-                    BackgroundColor3 = Library.MainColor;
+                local Button = Jqz:Create('Frame', {
+                    BackgroundColor3 = Jqz.MainColor;
                     BorderColor3 = Color3.new(0, 0, 0);
                     Size = UDim2.new(0.5, 0, 1, 0);
                     ZIndex = 6;
                     Parent = TabboxButtons;
                 });
 
-                Library:AddToRegistry(Button, {
+                Jqz:AddToRegistry(Button, {
                     BackgroundColor3 = 'MainColor';
                 });
 
-                local ButtonLabel = Library:CreateLabel({
+                local ButtonLabel = Jqz:CreateLabel({
                     Size = UDim2.new(1, 0, 1, 0);
                     TextSize = 14;
                     Text = Name;
@@ -3364,8 +3337,8 @@ function Library:CreateWindow(...)
                     Parent = Button;
                 });
 
-                local Block = Library:Create('Frame', {
-                    BackgroundColor3 = Library.BackgroundColor;
+                local Block = Jqz:Create('Frame', {
+                    BackgroundColor3 = Jqz.BackgroundColor;
                     BorderSizePixel = 0;
                     Position = UDim2.new(0, 0, 1, 0);
                     Size = UDim2.new(1, 0, 0, 1);
@@ -3374,11 +3347,11 @@ function Library:CreateWindow(...)
                     Parent = Button;
                 });
 
-                Library:AddToRegistry(Block, {
+                Jqz:AddToRegistry(Block, {
                     BackgroundColor3 = 'BackgroundColor';
                 });
 
-                local Container = Library:Create('Frame', {
+                local Container = Jqz:Create('Frame', {
                     BackgroundTransparency = 1;
                     Position = UDim2.new(0, 4, 0, 20);
                     Size = UDim2.new(1, -4, 1, -20);
@@ -3387,7 +3360,7 @@ function Library:CreateWindow(...)
                     Parent = BoxInner;
                 });
 
-                Library:Create('UIListLayout', {
+                Jqz:Create('UIListLayout', {
                     FillDirection = Enum.FillDirection.Vertical;
                     SortOrder = Enum.SortOrder.LayoutOrder;
                     Parent = Container;
@@ -3401,8 +3374,8 @@ function Library:CreateWindow(...)
                     Container.Visible = true;
                     Block.Visible = true;
 
-                    Button.BackgroundColor3 = Library.BackgroundColor;
-                    Library.RegistryMap[Button].Properties.BackgroundColor3 = 'BackgroundColor';
+                    Button.BackgroundColor3 = Jqz.BackgroundColor;
+                    Jqz.RegistryMap[Button].Properties.BackgroundColor3 = 'BackgroundColor';
 
                     Tab:Resize();
                 end;
@@ -3411,8 +3384,8 @@ function Library:CreateWindow(...)
                     Container.Visible = false;
                     Block.Visible = false;
 
-                    Button.BackgroundColor3 = Library.MainColor;
-                    Library.RegistryMap[Button].Properties.BackgroundColor3 = 'MainColor';
+                    Button.BackgroundColor3 = Jqz.MainColor;
+                    Jqz.RegistryMap[Button].Properties.BackgroundColor3 = 'MainColor';
                 end;
 
                 function Tab:Resize()
@@ -3444,7 +3417,7 @@ function Library:CreateWindow(...)
                 end;
 
                 Button.InputBegan:Connect(function(Input)
-                    if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+                    if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Jqz:MouseIsOverOpenedFrame() then
                         Tab:Show();
                         Tab:Resize();
                     end;
@@ -3494,7 +3467,7 @@ function Library:CreateWindow(...)
         return Tab;
     end;
 
-    local ModalElement = Library:Create('TextButton', {
+    local ModalElement = Jqz:Create('TextButton', {
         BackgroundTransparency = 1;
         Size = UDim2.new(0, 0, 0, 0);
         Visible = true;
@@ -3507,7 +3480,7 @@ function Library:CreateWindow(...)
     local Toggled = false;
     local Fading = false;
 
-    function Library:Toggle()
+    function Jqz:Toggle()
         if Fading then
             return;
         end;
@@ -3522,7 +3495,6 @@ function Library:CreateWindow(...)
             Outer.Visible = true;
 
             task.spawn(function()
-                -- TODO: add cursor fade?
                 local State = InputService.MouseIconEnabled;
 
                 local Cursor = Drawing.new('Triangle');
@@ -3541,7 +3513,7 @@ function Library:CreateWindow(...)
 
                     local mPos = InputService:GetMouseLocation();
 
-                    Cursor.Color = Library.AccentColor;
+                    Cursor.Color = Jqz.AccentColor;
 
                     Cursor.PointA = Vector2.new(mPos.X, mPos.Y);
                     Cursor.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
@@ -3602,17 +3574,17 @@ function Library:CreateWindow(...)
         Fading = false;
     end
 
-    Library:GiveSignal(InputService.InputBegan:Connect(function(Input, Processed)
-        if type(Library.ToggleKeybind) == 'table' and Library.ToggleKeybind.Type == 'KeyPicker' then
-            if Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode.Name == Library.ToggleKeybind.Value then
-                task.spawn(Library.Toggle)
+    Jqz:GiveSignal(InputService.InputBegan:Connect(function(Input, Processed)
+        if type(Jqz.ToggleKeybind) == 'table' and Jqz.ToggleKeybind.Type == 'KeyPicker' then
+            if Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode.Name == Jqz.ToggleKeybind.Value then
+                task.spawn(Jqz.Toggle)
             end
         elseif Input.KeyCode == Enum.KeyCode.RightControl or (Input.KeyCode == Enum.KeyCode.RightShift and (not Processed)) then
-            task.spawn(Library.Toggle)
+            task.spawn(Jqz.Toggle)
         end
     end))
 
-    if Config.AutoShow then task.spawn(Library.Toggle) end
+    if Config.AutoShow then task.spawn(Jqz.Toggle) end
 
     Window.Holder = Outer;
 
@@ -3632,5 +3604,5 @@ end;
 Players.PlayerAdded:Connect(OnPlayerChange);
 Players.PlayerRemoving:Connect(OnPlayerChange);
 
-getgenv().Library = Library
-return Library
+getgenv().Jqz = Jqz
+return Jqz
