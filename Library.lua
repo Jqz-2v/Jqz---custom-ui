@@ -31,8 +31,13 @@ local Jqz = {
     -- White / grey palette (was purple)
     FontColor = Color3.fromRGB(205, 205, 205);
     DimColor = Color3.fromRGB(110, 110, 110);
-    MainColor = Color3.fromRGB(24, 24, 24);
-    BackgroundColor = Color3.fromRGB(10, 10, 10);
+    -- Layers, darkest (back) to lightest (front):
+    -- Background (window) > Panel (tab area) > Box (groupbox) > Header (groupbox title bar) > Main (controls)
+    BackgroundColor = Color3.fromRGB(7, 7, 7);
+    PanelColor = Color3.fromRGB(12, 12, 12);
+    BoxColor = Color3.fromRGB(17, 17, 17);
+    HeaderColor = Color3.fromRGB(25, 25, 25);
+    MainColor = Color3.fromRGB(33, 33, 33);
     AccentColor = Color3.fromRGB(255, 255, 255);
     OutlineColor = Color3.fromRGB(52, 52, 52);
     RiskColor = Color3.fromRGB(255, 70, 70);
@@ -1647,6 +1652,13 @@ function Jqz:CreateWindow(Config)
     })
     Jqz:MakeDraggable(Outer, 25)
 
+    -- Soft shadow layer behind the whole window
+    local Shadow = Jqz:Create('Frame', {
+        BackgroundColor3 = Color3.new(0, 0, 0); BackgroundTransparency = 0.55; BorderSizePixel = 0;
+        Position = UDim2.new(0, -5, 0, -5); Size = UDim2.new(1, 10, 1, 10);
+        ZIndex = 0; Parent = Outer;
+    })
+
     local Inner = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
         BorderMode = Enum.BorderMode.Inset;
@@ -1662,6 +1674,18 @@ function Jqz:CreateWindow(Config)
         Position = UDim2.new(0, 0, 0, 0); Size = UDim2.new(1, 0, 0, 2); ZIndex = 3; Parent = Inner;
     })
     Jqz:AddToRegistry(WindowBar, { BackgroundColor3 = 'AccentColor' })
+
+    -- Title bar layer
+    local TitleBar = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.HeaderColor; BorderSizePixel = 0;
+        Position = UDim2.new(0, 0, 0, 2); Size = UDim2.new(1, 0, 0, 28); ZIndex = 2; Parent = Inner;
+    })
+    Jqz:AddToRegistry(TitleBar, { BackgroundColor3 = 'HeaderColor' })
+    local TitleLine = Jqz:Create('Frame', {
+        BackgroundColor3 = Jqz.OutlineColor; BorderSizePixel = 0;
+        Position = UDim2.new(0, 0, 0, 30); Size = UDim2.new(1, 0, 0, 1); ZIndex = 2; Parent = Inner;
+    })
+    Jqz:AddToRegistry(TitleLine, { BackgroundColor3 = 'OutlineColor' })
 
     local TitleLabel = Jqz:CreateLabel({
         Position = UDim2.new(0, 14, 0, 6); Size = UDim2.new(1, -28, 0, 22);
@@ -1679,10 +1703,13 @@ function Jqz:CreateWindow(Config)
         SortOrder = Enum.SortOrder.LayoutOrder; Parent = TabArea;
     })
     local TabContainer = Jqz:Create('Frame', {
-        BackgroundTransparency = 1; BorderSizePixel = 0;
+        BackgroundColor3 = Jqz.PanelColor; BorderColor3 = Jqz.OutlineColor;
+        BorderMode = Enum.BorderMode.Inset;
         Position = UDim2.new(0, 8, 0, 68); Size = UDim2.new(1, -16, 1, -76);
         ZIndex = 2; Parent = Inner;
     })
+    Jqz:Corner(TabContainer, 0)
+    Jqz:AddToRegistry(TabContainer, { BackgroundColor3 = 'PanelColor'; BorderColor3 = 'OutlineColor' })
 
     function Window:SetWindowTitle(t) TitleLabel.Text = t end
 
@@ -1749,16 +1776,27 @@ function Jqz:CreateWindow(Config)
             local Side = Info.Side == 1 and LeftSide or RightSide
 
             local BOuter = Jqz:Create('Frame', {
-                BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
+                BackgroundColor3 = Jqz.BoxColor; BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 0, 509);
                 ZIndex = 2; Parent = Side;
             })
             Jqz:Corner(BOuter, 0)
-            Jqz:AddToRegistry(BOuter, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
+            Jqz:AddToRegistry(BOuter, { BackgroundColor3 = 'BoxColor'; BorderColor3 = 'OutlineColor' })
             local BInner = Jqz:Create('Frame', {
                 BackgroundTransparency = 1; BorderSizePixel = 0;
                 Size = UDim2.new(1, -2, 1, -2); Position = UDim2.new(0, 1, 0, 1); ZIndex = 4; Parent = BOuter;
             })
+            -- Header layer behind the groupbox title
+            local BHeader = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.HeaderColor; BorderSizePixel = 0;
+                Position = UDim2.new(0, 0, 0, 0); Size = UDim2.new(1, 0, 0, 21); ZIndex = 4; Parent = BInner;
+            })
+            Jqz:AddToRegistry(BHeader, { BackgroundColor3 = 'HeaderColor' })
+            local BHeaderLine = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.OutlineColor; BorderSizePixel = 0;
+                Position = UDim2.new(0, 0, 0, 21); Size = UDim2.new(1, 0, 0, 1); ZIndex = 4; Parent = BInner;
+            })
+            Jqz:AddToRegistry(BHeaderLine, { BackgroundColor3 = 'OutlineColor' })
             local BBar = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
                 Position = UDim2.new(0, 0, 0, 0); Size = UDim2.new(1, 0, 0, 2); ZIndex = 5; Parent = BInner;
@@ -1798,16 +1836,27 @@ function Jqz:CreateWindow(Config)
             local Side = Info.Side == 1 and LeftSide or RightSide
 
             local BOuter = Jqz:Create('Frame', {
-                BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
+                BackgroundColor3 = Jqz.BoxColor; BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 0, 0);
                 ZIndex = 2; Parent = Side;
             })
             Jqz:Corner(BOuter, 0)
-            Jqz:AddToRegistry(BOuter, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
+            Jqz:AddToRegistry(BOuter, { BackgroundColor3 = 'BoxColor'; BorderColor3 = 'OutlineColor' })
             local BInner = Jqz:Create('Frame', {
                 BackgroundTransparency = 1; BorderSizePixel = 0;
                 Size = UDim2.new(1, -2, 1, -2); Position = UDim2.new(0, 1, 0, 1); ZIndex = 4; Parent = BOuter;
             })
+            -- Header layer behind the tab buttons
+            local BHeader = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.HeaderColor; BorderSizePixel = 0;
+                Position = UDim2.new(0, 0, 0, 0); Size = UDim2.new(1, 0, 0, 23); ZIndex = 4; Parent = BInner;
+            })
+            Jqz:AddToRegistry(BHeader, { BackgroundColor3 = 'HeaderColor' })
+            local BHeaderLine = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.OutlineColor; BorderSizePixel = 0;
+                Position = UDim2.new(0, 0, 0, 23); Size = UDim2.new(1, 0, 0, 1); ZIndex = 4; Parent = BInner;
+            })
+            Jqz:AddToRegistry(BHeaderLine, { BackgroundColor3 = 'OutlineColor' })
             local BBar = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
                 Position = UDim2.new(0, 0, 0, 0); Size = UDim2.new(1, 0, 0, 2); ZIndex = 10; Parent = BInner;
