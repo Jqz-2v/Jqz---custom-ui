@@ -23,17 +23,18 @@ local Jqz = {
     Registry = {};
     RegistryMap = {};
     HudRegistry = {};
+    BorderMap = setmetatable({}, { __mode = 'k' });
 
-    FontColor = Color3.fromRGB(255, 255, 255);
-    MainColor = Color3.fromRGB(0, 0, 0);
-    BackgroundColor = Color3.fromRGB(15, 12, 22);
+    FontColor = Color3.fromRGB(240, 236, 250);
+    MainColor = Color3.fromRGB(25, 21, 36);
+    BackgroundColor = Color3.fromRGB(16, 13, 24);
     AccentColor = Color3.fromRGB(160, 90, 255);
-    OutlineColor = Color3.fromRGB(55, 42, 80);
-    RiskColor = Color3.fromRGB(255, 65, 65);
+    OutlineColor = Color3.fromRGB(52, 42, 76);
+    RiskColor = Color3.fromRGB(255, 70, 70);
 
     Black = Color3.new(0, 0, 0);
     White = Color3.new(1, 1, 1);
-    Font = Enum.Font.GothamSemibold;
+    Font = Enum.Font.GothamMedium;
 
     OpenedFrames = {};
     DependencyBoxes = {};
@@ -87,10 +88,33 @@ function Jqz:Create(Class, Properties)
     return inst
 end
 
-function Jqz:Corner(Parent, Radius)
-    local c = Jqz:Create('UICorner', { CornerRadius = UDim.new(0, Radius or 4); Parent = Parent })
-    Jqz:AddToRegistry(c, { CornerRadius = 'MainColor' })
-    return c
+function Jqz:SyncStroke(Inst)
+    local s = Jqz.BorderMap[Inst]
+    if s then s.Color = Inst.BorderColor3 end
+end
+
+function Jqz:Corner(Inst, Radius, NoStroke)
+    Jqz:Create('UICorner', { CornerRadius = UDim.new(0, Radius or 4); Parent = Inst })
+    if NoStroke then
+        Inst.BorderSizePixel = 0
+        return
+    end
+    local Stroke = Jqz:Create('UIStroke', {
+        Name = 'BorderStroke';
+        Color = Inst.BorderColor3;
+        Thickness = 1;
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+        BorderStrokePosition = Enum.BorderStrokePosition.Inner;
+        Parent = Inst;
+    })
+    Inst.BorderSizePixel = 0
+    Jqz.BorderMap[Inst] = Stroke
+    local P = Inst.Parent
+    if P and P:IsA('Frame') and Inst.Size == UDim2.new(1, 0, 1, 0) and P.BackgroundColor3 == Color3.new(0, 0, 0) then
+        P.BackgroundTransparency = 1
+        P.BorderSizePixel = 0
+        Jqz.BorderMap[P] = Stroke
+    end
 end
 
 function Jqz:ApplyTextStroke(Inst)
@@ -98,7 +122,8 @@ function Jqz:ApplyTextStroke(Inst)
     local s = Jqz:Create('UIStroke', {
         Color = Color3.new(0, 0, 0);
         Thickness = 1;
-        LineJoinMode = Enum.LineJoinMode.Miter;
+        Transparency = 0.55;
+        LineJoinMode = Enum.LineJoinMode.Round;
         Parent = Inst;
     })
     Jqz:AddToRegistry(s, { Color = 'Black' })
@@ -139,14 +164,14 @@ function Jqz:AddToolTip(Text, HoverInst)
     local Tip = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.MainColor;
         BorderColor3 = Jqz.OutlineColor;
-        Size = UDim2.fromOffset(X + 8, Y + 5);
+        Size = UDim2.fromOffset(X + 10, Y + 6);
         ZIndex = 100;
         Parent = Jqz.ScreenGui;
         Visible = false;
     })
-    Jqz:Corner(Tip, 4)
+    Jqz:Corner(Tip, 5)
     local Lbl = Jqz:CreateLabel({
-        Position = UDim2.fromOffset(4, 2);
+        Position = UDim2.fromOffset(5, 3);
         Size = UDim2.fromOffset(X, Y);
         TextSize = 13;
         Text = Text;
@@ -155,7 +180,6 @@ function Jqz:AddToolTip(Text, HoverInst)
         Parent = Tip;
     })
     Jqz:AddToRegistry(Tip, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
-    Jqz:AddToRegistry(Lbl, { TextColor3 = 'FontColor' })
     local Hovering = false
     HoverInst.MouseEnter:Connect(function()
         if Jqz:MouseIsOverOpenedFrame() then return end
@@ -179,6 +203,7 @@ function Jqz:OnHighlight(HoverInst, Target, On, Off)
             Target[k] = Jqz[v] or v
             if Reg and Reg.Properties[k] then Reg.Properties[k] = v end
         end
+        Jqz:SyncStroke(Target)
     end)
     HoverInst.MouseLeave:Connect(function()
         local Reg = Jqz.RegistryMap[Target]
@@ -186,6 +211,7 @@ function Jqz:OnHighlight(HoverInst, Target, On, Off)
             Target[k] = Jqz[v] or v
             if Reg and Reg.Properties[k] then Reg.Properties[k] = v end
         end
+        Jqz:SyncStroke(Target)
     end)
 end
 
@@ -252,6 +278,7 @@ function Jqz:UpdateColorsUsingRegistry()
             elseif type(idx) == 'function' then
                 obj.Instance[prop] = idx()
             end
+            if prop == 'BorderColor3' then Jqz:SyncStroke(obj.Instance) end
         end
     end
 end
@@ -305,9 +332,9 @@ do
             ZIndex = 6;
             Parent = ToggleLabel;
         })
-        Jqz:Corner(Swatch, 3)
+        Jqz:Corner(Swatch, 4)
 
-        Jqz:Create('ImageLabel', {
+        local SwatchChecker = Jqz:Create('ImageLabel', {
             BorderSizePixel = 0;
             Size = UDim2.new(0, 27, 0, 13);
             ZIndex = 5;
@@ -315,11 +342,12 @@ do
             Visible = not not Info.Transparency;
             Parent = Swatch;
         })
+        Jqz:Create('UICorner', { CornerRadius = UDim.new(0, 3); Parent = SwatchChecker })
 
         local PopupOuter = Jqz:Create('Frame', {
             Name = 'Color';
-            BackgroundColor3 = Color3.new(1, 1, 1);
-            BorderColor3 = Color3.new(0, 0, 0);
+            BackgroundColor3 = Color3.new(0, 0, 0);
+            BorderSizePixel = 0;
             Position = UDim2.fromOffset(Swatch.AbsolutePosition.X, Swatch.AbsolutePosition.Y + 18);
             Size = UDim2.fromOffset(230, Info.Transparency and 271 or 253);
             Visible = false;
@@ -338,18 +366,21 @@ do
             ZIndex = 16;
             Parent = PopupOuter;
         })
-        Jqz:Corner(PopupInner, 5)
+        Jqz:Corner(PopupInner, 6)
 
         local TopBar = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.AccentColor;
             BorderSizePixel = 0;
-            Size = UDim2.new(1, 0, 0, 2);
+            Position = UDim2.new(0, 5, 0, 1);
+            Size = UDim2.new(1, -10, 0, 2);
             ZIndex = 17;
             Parent = PopupInner;
         })
+        Jqz:Corner(TopBar, 1, true)
 
         local SatVibOuter = Jqz:Create('Frame', {
-            BorderColor3 = Color3.new(0, 0, 0);
+            BackgroundColor3 = Color3.new(0, 0, 0);
+            BorderSizePixel = 0;
             Position = UDim2.new(0, 4, 0, 25);
             Size = UDim2.new(0, 200, 0, 200);
             ZIndex = 17;
@@ -363,6 +394,7 @@ do
             ZIndex = 18;
             Parent = SatVibOuter;
         })
+        Jqz:Corner(SatVibInner, 5)
         local SatVibMap = Jqz:Create('ImageLabel', {
             BorderSizePixel = 0;
             Size = UDim2.new(1, 0, 1, 0);
@@ -370,6 +402,7 @@ do
             Image = 'rbxassetid://4155801252';
             Parent = SatVibInner;
         })
+        Jqz:Corner(SatVibMap, 5, true)
         local CursorOuter = Jqz:Create('ImageLabel', {
             AnchorPoint = Vector2.new(0.5, 0.5);
             Size = UDim2.new(0, 6, 0, 6);
@@ -389,7 +422,8 @@ do
         })
 
         local HueOuter = Jqz:Create('Frame', {
-            BorderColor3 = Color3.new(0, 0, 0);
+            BackgroundTransparency = 1;
+            BorderSizePixel = 0;
             Position = UDim2.new(0, 208, 0, 25);
             Size = UDim2.new(0, 15, 0, 200);
             ZIndex = 17;
@@ -402,72 +436,73 @@ do
             ZIndex = 18;
             Parent = HueOuter;
         })
+        Jqz:Corner(HueInner, 5, true)
         local HueCursor = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(1, 1, 1);
             AnchorPoint = Vector2.new(0, 0.5);
             BorderColor3 = Color3.new(0, 0, 0);
-            Size = UDim2.new(1, 0, 0, 1);
+            Size = UDim2.new(1, 0, 0, 2);
             ZIndex = 18;
             Parent = HueInner;
         })
+        Jqz:Corner(HueCursor, 1, true)
         local seq = {}
         for h = 0, 1, 0.1 do
             table.insert(seq, ColorSequenceKeypoint.new(h, Color3.fromHSV(h, 1, 1)))
         end
         Jqz:Create('UIGradient', { Color = ColorSequence.new(seq); Rotation = 90; Parent = HueInner })
 
-        local HexOuter = Jqz:Create('Frame', {
-            BorderColor3 = Color3.new(0, 0, 0);
-            Position = UDim2.fromOffset(4, 228);
-            Size = UDim2.new(0.5, -6, 0, 20);
-            ZIndex = 18;
-            Parent = PopupInner;
-        })
-        local HexInner = Jqz:Create('Frame', {
-            BackgroundColor3 = Jqz.MainColor;
-            BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset;
-            Size = UDim2.new(1, 0, 1, 0);
-            ZIndex = 18;
-            Parent = HexOuter;
-        })
-        Jqz:Corner(HexInner, 3)
-        Jqz:Create('UIGradient', {
-            Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.new(1,1,1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(210,210,210)) });
-            Rotation = 90; Parent = HexInner;
-        })
-        local HexBox = Jqz:Create('TextBox', {
-            BackgroundTransparency = 1;
-            Position = UDim2.new(0, 5, 0, 0);
-            Size = UDim2.new(1, -5, 1, 0);
-            Font = Jqz.Font;
-            PlaceholderColor3 = Color3.fromRGB(130, 110, 160);
-            PlaceholderText = 'Hex';
-            Text = '#FFFFFF';
-            TextColor3 = Jqz.FontColor;
-            TextSize = 13;
-            TextStrokeTransparency = 0;
-            TextXAlignment = Enum.TextXAlignment.Left;
-            ZIndex = 20;
-            Parent = HexInner;
-        })
-        Jqz:ApplyTextStroke(HexBox)
+        local function MakeBox(Pos, Size, Text, Placeholder)
+            local O = Jqz:Create('Frame', {
+                BackgroundColor3 = Color3.new(0, 0, 0);
+                BorderSizePixel = 0;
+                Position = Pos;
+                Size = Size;
+                ZIndex = 18;
+                Parent = PopupInner;
+            })
+            local I = Jqz:Create('Frame', {
+                BackgroundColor3 = Jqz.MainColor;
+                BorderColor3 = Jqz.OutlineColor;
+                BorderMode = Enum.BorderMode.Inset;
+                Size = UDim2.new(1, 0, 1, 0);
+                ZIndex = 18;
+                Parent = O;
+            })
+            Jqz:Corner(I, 4)
+            Jqz:Create('UIGradient', {
+                Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 215, 215)) });
+                Rotation = 90; Parent = I;
+            })
+            local T = Jqz:Create('TextBox', {
+                BackgroundTransparency = 1;
+                Position = UDim2.new(0, 6, 0, 0);
+                Size = UDim2.new(1, -6, 1, 0);
+                Font = Jqz.Font;
+                PlaceholderColor3 = Color3.fromRGB(130, 110, 160);
+                PlaceholderText = Placeholder;
+                Text = Text;
+                TextColor3 = Jqz.FontColor;
+                TextSize = 13;
+                TextStrokeTransparency = 0;
+                TextXAlignment = Enum.TextXAlignment.Left;
+                ZIndex = 20;
+                Parent = I;
+            })
+            Jqz:ApplyTextStroke(T)
+            Jqz:AddToRegistry(I, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
+            Jqz:AddToRegistry(T, { TextColor3 = 'FontColor' })
+            return T
+        end
 
-        local RgbOuter = Jqz:Create(HexOuter:Clone(), {
-            Position = UDim2.new(0.5, 2, 0, 228);
-            Size = UDim2.new(0.5, -6, 0, 20);
-            Parent = PopupInner;
-        })
-        local RgbBox = Jqz:Create(RgbOuter.Frame:FindFirstChild('TextBox'), {
-            Text = '255, 255, 255';
-            PlaceholderText = 'R, G, B';
-            TextColor3 = Jqz.FontColor;
-        })
+        local HexBox = MakeBox(UDim2.fromOffset(4, 228), UDim2.new(0.5, -6, 0, 20), '#FFFFFF', 'Hex')
+        local RgbBox = MakeBox(UDim2.new(0.5, 2, 0, 228), UDim2.new(0.5, -6, 0, 20), '255, 255, 255', 'R, G, B')
 
         local TAlphaOuter, TAlphaInner, TAlphaCursor
         if Info.Transparency then
             TAlphaOuter = Jqz:Create('Frame', {
-                BorderColor3 = Color3.new(0,0,0);
+                BackgroundTransparency = 1;
+                BorderSizePixel = 0;
                 Position = UDim2.fromOffset(4, 251);
                 Size = UDim2.new(1, -8, 0, 15);
                 ZIndex = 19;
@@ -481,27 +516,30 @@ do
                 ZIndex = 19;
                 Parent = TAlphaOuter;
             })
+            Jqz:Corner(TAlphaInner, 4)
             Jqz:AddToRegistry(TAlphaInner, { BorderColor3 = 'OutlineColor' })
-            Jqz:Create('ImageLabel', {
+            local TAlphaImage = Jqz:Create('ImageLabel', {
                 BackgroundTransparency = 1;
-                Size = UDim2.new(1,0,1,0);
+                Size = UDim2.new(1, 0, 1, 0);
                 Image = 'http://www.roblox.com/asset/?id=12978095818';
                 ZIndex = 20;
                 Parent = TAlphaInner;
             })
+            Jqz:Create('UICorner', { CornerRadius = UDim.new(0, 4); Parent = TAlphaImage })
             TAlphaCursor = Jqz:Create('Frame', {
-                BackgroundColor3 = Color3.new(1,1,1);
+                BackgroundColor3 = Color3.new(1, 1, 1);
                 AnchorPoint = Vector2.new(0.5, 0);
-                BorderColor3 = Color3.new(0,0,0);
-                Size = UDim2.new(0, 1, 1, 0);
+                BorderColor3 = Color3.new(0, 0, 0);
+                Size = UDim2.new(0, 2, 1, 0);
                 ZIndex = 21;
                 Parent = TAlphaInner;
             })
+            Jqz:Corner(TAlphaCursor, 1, true)
         end
 
         Jqz:CreateLabel({
             Size = UDim2.new(1, 0, 0, 14);
-            Position = UDim2.fromOffset(5, 5);
+            Position = UDim2.fromOffset(6, 6);
             TextXAlignment = Enum.TextXAlignment.Left;
             TextSize = 13;
             Text = CP.Title;
@@ -511,14 +549,14 @@ do
 
         local Ctx = {}
         do
-            Ctx.Container = Jqz:Create('Frame', { BorderColor3 = Color3.new(); ZIndex = 14; Visible = false; Parent = ScreenGui })
+            Ctx.Container = Jqz:Create('Frame', { BackgroundColor3 = Color3.new(0, 0, 0); BorderSizePixel = 0; ZIndex = 14; Visible = false; Parent = ScreenGui })
             Ctx.Inner = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
-                BorderMode = Enum.BorderMode.Inset; Size = UDim2.fromScale(1,1); ZIndex = 15; Parent = Ctx.Container;
+                BorderMode = Enum.BorderMode.Inset; Size = UDim2.fromScale(1, 1); ZIndex = 15; Parent = Ctx.Container;
             })
-            Jqz:Corner(Ctx.Inner, 4)
+            Jqz:Corner(Ctx.Inner, 5)
             Jqz:Create('UIListLayout', { Name = 'Layout'; FillDirection = Enum.FillDirection.Vertical; SortOrder = Enum.SortOrder.LayoutOrder; Parent = Ctx.Inner })
-            Jqz:Create('UIPadding', { Name = 'Padding'; PaddingLeft = UDim.new(0, 4); Parent = Ctx.Inner })
+            Jqz:Create('UIPadding', { Name = 'Padding'; PaddingLeft = UDim.new(0, 5); PaddingTop = UDim.new(0, 2); Parent = Ctx.Inner })
 
             local function CtxPos()
                 Ctx.Container.Position = UDim2.fromOffset(
@@ -531,7 +569,7 @@ do
                 for _, l in next, Ctx.Inner:GetChildren() do
                     if l:IsA('TextLabel') then w = math.max(w, l.TextBounds.X) end
                 end
-                Ctx.Container.Size = UDim2.fromOffset(w + 8, Ctx.Inner.Layout.AbsoluteContentSize.Y + 4)
+                Ctx.Container.Size = UDim2.fromOffset(w + 10, Ctx.Inner.Layout.AbsoluteContentSize.Y + 6)
             end
             Swatch:GetPropertyChangedSignal('AbsolutePosition'):Connect(CtxPos)
             Ctx.Inner.Layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(CtxSize)
@@ -543,7 +581,7 @@ do
             function Ctx:AddOption(Label, Fn)
                 if type(Fn) ~= 'function' then Fn = function() end end
                 local Btn = Jqz:CreateLabel({
-                    Active = false; Size = UDim2.new(1, 0, 0, 15); TextSize = 12;
+                    Active = false; Size = UDim2.new(1, 0, 0, 16); TextSize = 12;
                     Text = Label; ZIndex = 16; Parent = self.Inner; TextXAlignment = Enum.TextXAlignment.Left;
                 })
                 Jqz:OnHighlight(Btn, Btn, { TextColor3 = 'AccentColor' }, { TextColor3 = 'FontColor' })
@@ -566,10 +604,6 @@ do
         Jqz:AddToRegistry(PopupInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
         Jqz:AddToRegistry(TopBar,     { BackgroundColor3 = 'AccentColor' })
         Jqz:AddToRegistry(SatVibInner,{ BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
-        Jqz:AddToRegistry(HexInner,   { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
-        Jqz:AddToRegistry(RgbOuter.Frame, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
-        Jqz:AddToRegistry(HexBox,     { TextColor3 = 'FontColor' })
-        Jqz:AddToRegistry(RgbBox,     { TextColor3 = 'FontColor' })
 
         HexBox.FocusLost:Connect(function(enter)
             if enter then
@@ -580,8 +614,8 @@ do
         end)
         RgbBox.FocusLost:Connect(function(enter)
             if enter then
-                local r,g,b = RgbBox.Text:match('(%d+),%s*(%d+),%s*(%d+)')
-                if r then CP.Hue, CP.Sat, CP.Vib = Color3.toHSV(Color3.fromRGB(r,g,b)) end
+                local r, g, b = RgbBox.Text:match('(%d+),%s*(%d+),%s*(%d+)')
+                if r then CP.Hue, CP.Sat, CP.Vib = Color3.toHSV(Color3.fromRGB(r, g, b)) end
             end
             CP:Display()
         end)
@@ -594,6 +628,7 @@ do
                 BackgroundTransparency = CP.Transparency;
                 BorderColor3 = Jqz:GetDarkerColor(CP.Value);
             })
+            Jqz:SyncStroke(Swatch)
             if TAlphaInner then
                 TAlphaInner.BackgroundColor3 = CP.Value
                 TAlphaCursor.Position = UDim2.new(1 - CP.Transparency, 0, 0, 0)
@@ -697,24 +732,24 @@ do
         if KP.SyncToggleState then Info.Modes = { 'Toggle' }; Info.Mode = 'Toggle' end
 
         local PickOuter = Jqz:Create('Frame', {
-            BackgroundColor3 = Color3.new(0,0,0); BorderColor3 = Color3.new(0,0,0);
+            BackgroundColor3 = Color3.new(0, 0, 0); BorderSizePixel = 0;
             Size = UDim2.new(0, 28, 0, 15); ZIndex = 6; Parent = ToggleLabel;
         })
         local PickInner = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 7; Parent = PickOuter;
+            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 7; Parent = PickOuter;
         })
-        Jqz:Corner(PickInner, 3)
+        Jqz:Corner(PickInner, 4)
         Jqz:AddToRegistry(PickInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
         local DisplayLabel = Jqz:CreateLabel({
-            Size = UDim2.new(1,0,1,0); TextSize = 12; Text = Info.Default;
+            Size = UDim2.new(1, 0, 1, 0); TextSize = 12; Text = Info.Default;
             TextWrapped = true; ZIndex = 8; Parent = PickInner;
         })
 
         local ModeOuter = Jqz:Create('Frame', {
-            BorderColor3 = Color3.new(0,0,0);
+            BackgroundColor3 = Color3.new(0, 0, 0); BorderSizePixel = 0;
             Position = UDim2.fromOffset(ToggleLabel.AbsolutePosition.X + ToggleLabel.AbsoluteSize.X + 4, ToggleLabel.AbsolutePosition.Y + 1);
-            Size = UDim2.new(0, 60, 0, 47);
+            Size = UDim2.new(0, 64, 0, 50);
             Visible = false; ZIndex = 14; Parent = ScreenGui;
         })
         ToggleLabel:GetPropertyChangedSignal('AbsolutePosition'):Connect(function()
@@ -722,14 +757,15 @@ do
         end)
         local ModeInner = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 15; Parent = ModeOuter;
+            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 15; Parent = ModeOuter;
         })
-        Jqz:Corner(ModeInner, 4)
+        Jqz:Corner(ModeInner, 5)
         Jqz:AddToRegistry(ModeInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
         Jqz:Create('UIListLayout', { FillDirection = Enum.FillDirection.Vertical; SortOrder = Enum.SortOrder.LayoutOrder; Parent = ModeInner })
+        Jqz:Create('UIPadding', { PaddingTop = UDim.new(0, 2); Parent = ModeInner })
 
         local ContainerLabel = Jqz:CreateLabel({
-            TextXAlignment = Enum.TextXAlignment.Left; Size = UDim2.new(1,0,0,18);
+            TextXAlignment = Enum.TextXAlignment.Left; Size = UDim2.new(1, 0, 0, 18);
             TextSize = 12; Visible = false; ZIndex = 110; Parent = Jqz.KeybindContainer;
         }, true)
 
@@ -738,7 +774,7 @@ do
         for _, Mode in next, Modes do
             local MB = {}
             local Lbl = Jqz:CreateLabel({
-                Active = false; Size = UDim2.new(1,0,0,15); TextSize = 12;
+                Active = false; Size = UDim2.new(1, 0, 0, 15); TextSize = 12;
                 Text = Mode; ZIndex = 16; Parent = ModeInner;
             })
             function MB:Select()
@@ -864,22 +900,22 @@ do
     local Funcs = {}
 
     function Funcs:AddBlank(sz)
-        Jqz:Create('Frame', { BackgroundTransparency = 1; Size = UDim2.new(1,0,0,sz); ZIndex = 1; Parent = self.Container })
+        Jqz:Create('Frame', { BackgroundTransparency = 1; Size = UDim2.new(1, 0, 0, sz); ZIndex = 1; Parent = self.Container })
     end
 
     function Funcs:AddLabel(Text, Wrap)
         local GB = self
         local Lbl = Jqz:CreateLabel({
-            Size = UDim2.new(1,-4,0,15); TextSize = 13; Text = Text;
+            Size = UDim2.new(1, -4, 0, 15); TextSize = 13; Text = Text;
             TextWrapped = Wrap or false; TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 5; Parent = GB.Container;
         })
         if Wrap then
             local Y = select(2, Jqz:GetTextBounds(Text, Jqz.Font, 13, Vector2.new(Lbl.AbsoluteSize.X, math.huge)))
-            Lbl.Size = UDim2.new(1,-4,0,Y)
+            Lbl.Size = UDim2.new(1, -4, 0, Y)
         else
             Jqz:Create('UIListLayout', {
-                Padding = UDim.new(0,4); FillDirection = Enum.FillDirection.Horizontal;
+                Padding = UDim.new(0, 4); FillDirection = Enum.FillDirection.Horizontal;
                 HorizontalAlignment = Enum.HorizontalAlignment.Right; SortOrder = Enum.SortOrder.LayoutOrder;
                 Parent = Lbl;
             })
@@ -889,7 +925,7 @@ do
             Lbl.Text = t
             if Wrap then
                 local Y = select(2, Jqz:GetTextBounds(t, Jqz.Font, 13, Vector2.new(Lbl.AbsoluteSize.X, math.huge)))
-                Lbl.Size = UDim2.new(1,-4,0,Y)
+                Lbl.Size = UDim2.new(1, -4, 0, Y)
             end
             GB:Resize()
         end
@@ -907,7 +943,7 @@ do
                 obj.Text = p.Text; obj.Func = p.Func
                 obj.DoubleClick = p.DoubleClick; obj.Tooltip = p.Tooltip
             else
-                obj.Text = select(1,...); obj.Func = select(2,...)
+                obj.Text = select(1, ...); obj.Func = select(2, ...)
             end
             assert(type(obj.Func) == 'function', 'AddButton: Func missing')
         end
@@ -915,22 +951,22 @@ do
 
         local function MakeBtn(obj)
             local Outer = Jqz:Create('Frame', {
-                BackgroundColor3 = Color3.new(0,0,0); BorderColor3 = Color3.new(0,0,0);
-                Size = UDim2.new(1,-4,0,20); ZIndex = 5;
+                BackgroundColor3 = Color3.new(0, 0, 0); BorderColor3 = Jqz.OutlineColor;
+                Size = UDim2.new(1, -4, 0, 21); ZIndex = 5;
             })
             local Inner = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-                BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 6; Parent = Outer;
+                BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 6; Parent = Outer;
             })
-            Jqz:Corner(Inner, 3)
-            local Lbl = Jqz:CreateLabel({ Size = UDim2.new(1,0,1,0); TextSize = 13; Text = obj.Text; ZIndex = 6; Parent = Inner })
+            Jqz:Corner(Inner, 5)
+            local Lbl = Jqz:CreateLabel({ Size = UDim2.new(1, 0, 1, 0); TextSize = 13; Text = obj.Text; ZIndex = 6; Parent = Inner })
             Jqz:Create('UIGradient', {
-                Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.new(1,1,1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(210,210,210)) });
+                Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 215, 215)) });
                 Rotation = 90; Parent = Inner;
             })
-            Jqz:AddToRegistry(Outer, { BorderColor3 = 'Black' })
+            Jqz:AddToRegistry(Outer, { BorderColor3 = 'OutlineColor' })
             Jqz:AddToRegistry(Inner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
-            Jqz:OnHighlight(Outer, Outer, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' })
+            Jqz:OnHighlight(Outer, Outer, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'OutlineColor' })
             return Outer, Inner, Lbl
         end
 
@@ -968,20 +1004,20 @@ do
         Btn.Outer.Parent = GB.Container
         Wire(Btn)
 
-        function Btn:AddTooltip(t) if type(t)=='string' then Jqz:AddToolTip(t, self.Outer) end; return self end
+        function Btn:AddTooltip(t) if type(t) == 'string' then Jqz:AddToolTip(t, self.Outer) end; return self end
         function Btn:AddButton(...)
             local Sub = {}
             ParseArgs('', Sub, ...)
-            self.Outer.Size = UDim2.new(0.5,-2,0,20)
+            self.Outer.Size = UDim2.new(0.5, -3, 0, 21)
             Sub.Outer, Sub.Inner, Sub.Label = MakeBtn(Sub)
-            Sub.Outer.Position = UDim2.new(1,3,0,0)
-            Sub.Outer.Size = UDim2.fromOffset(self.Outer.AbsoluteSize.X - 2, self.Outer.AbsoluteSize.Y)
+            Sub.Outer.Position = UDim2.new(1, 5, 0, 0)
+            Sub.Outer.Size = UDim2.fromOffset(self.Outer.AbsoluteSize.X, self.Outer.AbsoluteSize.Y)
             Sub.Outer.Parent = self.Outer
-            function Sub:AddTooltip(t) if type(t)=='string' then Jqz:AddToolTip(t, self.Outer) end; return self end
-            if type(Sub.Tooltip)=='string' then Sub:AddTooltip(Sub.Tooltip) end
+            function Sub:AddTooltip(t) if type(t) == 'string' then Jqz:AddToolTip(t, self.Outer) end; return self end
+            if type(Sub.Tooltip) == 'string' then Sub:AddTooltip(Sub.Tooltip) end
             Wire(Sub); return Sub
         end
-        if type(Btn.Tooltip)=='string' then Btn:AddTooltip(Btn.Tooltip) end
+        if type(Btn.Tooltip) == 'string' then Btn:AddTooltip(Btn.Tooltip) end
         GB:AddBlank(5); GB:Resize()
         return Btn
     end
@@ -989,14 +1025,15 @@ do
     function Funcs:AddDivider()
         self:AddBlank(2)
         local O = Jqz:Create('Frame', {
-            BackgroundColor3 = Color3.new(0,0,0); BorderColor3 = Color3.new(0,0,0);
-            Size = UDim2.new(1,-4,0,5); ZIndex = 5; Parent = self.Container;
+            BackgroundColor3 = Color3.new(0, 0, 0); BorderColor3 = Jqz.OutlineColor;
+            Size = UDim2.new(1, -4, 0, 4); ZIndex = 5; Parent = self.Container;
         })
         local I = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 6; Parent = O;
+            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 6; Parent = O;
         })
-        Jqz:AddToRegistry(O, { BorderColor3 = 'Black' })
+        Jqz:Corner(I, 2)
+        Jqz:AddToRegistry(O, { BorderColor3 = 'OutlineColor' })
         Jqz:AddToRegistry(I, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
         self:AddBlank(9); self:Resize()
     end
@@ -1006,33 +1043,34 @@ do
         local GB = self
         local TB = { Value = Info.Default or ''; Numeric = Info.Numeric; Finished = Info.Finished; Type = 'Input'; Callback = Info.Callback or function() end }
         Jqz:CreateLabel({
-            Size = UDim2.new(1,0,0,15); TextSize = 13; Text = Info.Text;
+            Size = UDim2.new(1, 0, 0, 15); TextSize = 13; Text = Info.Text;
             TextXAlignment = Enum.TextXAlignment.Left; ZIndex = 5; Parent = GB.Container;
         })
         GB:AddBlank(1)
         local Outer = Jqz:Create('Frame', {
-            BackgroundColor3 = Color3.new(0,0,0); BorderColor3 = Color3.new(0,0,0);
-            Size = UDim2.new(1,-4,0,20); ZIndex = 5; Parent = GB.Container;
+            BackgroundColor3 = Color3.new(0, 0, 0); BorderColor3 = Jqz.OutlineColor;
+            Size = UDim2.new(1, -4, 0, 21); ZIndex = 5; Parent = GB.Container;
         })
         local Inner = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 6; Parent = Outer;
+            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 6; Parent = Outer;
         })
-        Jqz:Corner(Inner, 3)
+        Jqz:Corner(Inner, 5)
+        Jqz:AddToRegistry(Outer, { BorderColor3 = 'OutlineColor' })
         Jqz:AddToRegistry(Inner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
-        Jqz:OnHighlight(Outer, Outer, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' })
-        if type(Info.Tooltip)=='string' then Jqz:AddToolTip(Info.Tooltip, Outer) end
+        Jqz:OnHighlight(Outer, Outer, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'OutlineColor' })
+        if type(Info.Tooltip) == 'string' then Jqz:AddToolTip(Info.Tooltip, Outer) end
         Jqz:Create('UIGradient', {
-            Color = ColorSequence.new({ ColorSequenceKeypoint.new(0,Color3.new(1,1,1)), ColorSequenceKeypoint.new(1,Color3.fromRGB(210,210,210)) });
+            Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 215, 215)) });
             Rotation = 90; Parent = Inner;
         })
         local Clip = Jqz:Create('Frame', {
             BackgroundTransparency = 1; ClipsDescendants = true;
-            Position = UDim2.new(0,5,0,0); Size = UDim2.new(1,-5,1,0); ZIndex = 7; Parent = Inner;
+            Position = UDim2.new(0, 6, 0, 0); Size = UDim2.new(1, -8, 1, 0); ZIndex = 7; Parent = Inner;
         })
         local Box = Jqz:Create('TextBox', {
-            BackgroundTransparency = 1; Position = UDim2.fromOffset(0,0); Size = UDim2.fromScale(5,1);
-            Font = Jqz.Font; PlaceholderColor3 = Color3.fromRGB(130,110,160);
+            BackgroundTransparency = 1; Position = UDim2.fromOffset(0, 0); Size = UDim2.fromScale(5, 1);
+            Font = Jqz.Font; PlaceholderColor3 = Color3.fromRGB(130, 110, 160);
             PlaceholderText = Info.Placeholder or ''; Text = Info.Default or '';
             TextColor3 = Jqz.FontColor; TextSize = 13; TextStrokeTransparency = 0;
             TextXAlignment = Enum.TextXAlignment.Left; ZIndex = 7; Parent = Clip;
@@ -1088,40 +1126,38 @@ do
         }
 
         local TOuter = Jqz:Create('Frame', {
-            BackgroundColor3 = Color3.new(0,0,0); BorderColor3 = Color3.new(0,0,0);
-            Size = UDim2.new(0,13,0,13); ZIndex = 5; Parent = GB.Container;
+            BackgroundColor3 = Color3.new(0, 0, 0); BorderColor3 = Jqz.OutlineColor;
+            Size = UDim2.new(0, 14, 0, 14); ZIndex = 5; Parent = GB.Container;
         })
-        Jqz:AddToRegistry(TOuter, { BorderColor3 = 'Black' })
+        Jqz:AddToRegistry(TOuter, { BorderColor3 = 'OutlineColor' })
         local TInner = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 6; Parent = TOuter;
+            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 6; Parent = TOuter;
         })
-        Jqz:Corner(TInner, 2)
+        Jqz:Corner(TInner, 4)
         Jqz:AddToRegistry(TInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
 
         local TLabel = Jqz:CreateLabel({
-            Size = UDim2.new(0,216,1,0); Position = UDim2.new(1,6,0,0);
+            Size = UDim2.new(0, 216, 1, 0); Position = UDim2.new(1, 7, 0, 0);
             TextSize = 13; Text = Info.Text; TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 6; Parent = TInner;
         })
         Jqz:Create('UIListLayout', {
-            Padding = UDim.new(0,4); FillDirection = Enum.FillDirection.Horizontal;
+            Padding = UDim.new(0, 4); FillDirection = Enum.FillDirection.Horizontal;
             HorizontalAlignment = Enum.HorizontalAlignment.Right; SortOrder = Enum.SortOrder.LayoutOrder;
             Parent = TLabel;
         })
 
         local TRegion = Jqz:Create('Frame', {
-            BackgroundTransparency = 1; Size = UDim2.new(0,170,1,0); ZIndex = 8; Parent = TOuter;
+            BackgroundTransparency = 1; Size = UDim2.new(0, 170, 1, 0); ZIndex = 8; Parent = TOuter;
         })
-        Jqz:OnHighlight(TRegion, TOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' })
-        if type(Info.Tooltip)=='string' then Jqz:AddToolTip(Info.Tooltip, TRegion) end
+        Jqz:OnHighlight(TRegion, TOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'OutlineColor' })
+        if type(Info.Tooltip) == 'string' then Jqz:AddToolTip(Info.Tooltip, TRegion) end
 
         function Tog:UpdateColors() Tog:Display() end
         function Tog:Display()
             TInner.BackgroundColor3 = Tog.Value and Jqz.AccentColor or Jqz.MainColor
-            TInner.BorderColor3 = Tog.Value and Jqz.AccentColorDark or Jqz.OutlineColor
             Jqz.RegistryMap[TInner].Properties.BackgroundColor3 = Tog.Value and 'AccentColor' or 'MainColor'
-            Jqz.RegistryMap[TInner].Properties.BorderColor3 = Tog.Value and 'AccentColorDark' or 'OutlineColor'
         end
         function Tog:OnChanged(fn) Tog.Changed = fn; fn(Tog.Value) end
         function Tog:SetValue(b)
@@ -1169,7 +1205,7 @@ do
 
         if not Info.Compact then
             Jqz:CreateLabel({
-                Size = UDim2.new(1,0,0,10); TextSize = 13; Text = Info.Text;
+                Size = UDim2.new(1, 0, 0, 10); TextSize = 13; Text = Info.Text;
                 TextXAlignment = Enum.TextXAlignment.Left; TextYAlignment = Enum.TextYAlignment.Bottom;
                 ZIndex = 5; Parent = GB.Container;
             })
@@ -1177,36 +1213,30 @@ do
         end
 
         local SOuter = Jqz:Create('Frame', {
-            BackgroundColor3 = Color3.new(0,0,0); BorderColor3 = Color3.new(0,0,0);
-            Size = UDim2.new(1,-4,0,13); ZIndex = 5; Parent = GB.Container;
+            BackgroundColor3 = Color3.new(0, 0, 0); BorderColor3 = Jqz.OutlineColor;
+            Size = UDim2.new(1, -4, 0, 14); ZIndex = 5; Parent = GB.Container;
         })
-        Jqz:AddToRegistry(SOuter, { BorderColor3 = 'Black' })
+        Jqz:AddToRegistry(SOuter, { BorderColor3 = 'OutlineColor' })
         local SInner = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 6; Parent = SOuter;
+            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 6; Parent = SOuter;
         })
-        Jqz:Corner(SInner, 3)
+        Jqz:Corner(SInner, 5)
         Jqz:AddToRegistry(SInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
 
         local Fill = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.AccentColor; BorderColor3 = Jqz.AccentColorDark;
-            Size = UDim2.new(0,0,1,0); ZIndex = 7; Parent = SInner;
+            Size = UDim2.new(0, 0, 1, 0); ZIndex = 7; Parent = SInner;
         })
-        Jqz:Corner(Fill, 3)
-        Jqz:AddToRegistry(Fill, { BackgroundColor3 = 'AccentColor'; BorderColor3 = 'AccentColorDark' })
+        Jqz:Corner(Fill, 5, true)
+        Jqz:AddToRegistry(Fill, { BackgroundColor3 = 'AccentColor' })
 
-        local FillCap = Jqz:Create('Frame', {
-            BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
-            Position = UDim2.new(1,0,0,0); Size = UDim2.new(0,1,1,0); ZIndex = 8; Parent = Fill;
-        })
-        Jqz:AddToRegistry(FillCap, { BackgroundColor3 = 'AccentColor' })
-
-        local SLabel = Jqz:CreateLabel({ Size = UDim2.new(1,0,1,0); TextSize = 13; Text = '0'; ZIndex = 9; Parent = SInner })
-        Jqz:OnHighlight(SOuter, SOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' })
-        if type(Info.Tooltip)=='string' then Jqz:AddToolTip(Info.Tooltip, SOuter) end
+        local SLabel = Jqz:CreateLabel({ Size = UDim2.new(1, 0, 1, 0); TextSize = 13; Text = '0'; ZIndex = 9; Parent = SInner })
+        Jqz:OnHighlight(SOuter, SOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'OutlineColor' })
+        if type(Info.Tooltip) == 'string' then Jqz:AddToolTip(Info.Tooltip, SOuter) end
 
         function Sl:UpdateColors()
-            Fill.BackgroundColor3 = Jqz.AccentColor; Fill.BorderColor3 = Jqz.AccentColorDark
+            Fill.BackgroundColor3 = Jqz.AccentColor
         end
         function Sl:Display()
             local sfx = Info.Suffix or ''
@@ -1215,7 +1245,7 @@ do
             else SLabel.Text = Sl.Value .. sfx .. '/' .. Sl.Max .. sfx end
             local X = math.ceil(Jqz:MapValue(Sl.Value, Sl.Min, Sl.Max, 0, Sl.MaxSize))
             Fill.Size = UDim2.new(0, X, 1, 0)
-            FillCap.Visible = not (X == Sl.MaxSize or X == 0)
+            Fill.Visible = X > 0
         end
         function Sl:OnChanged(fn) Sl.Changed = fn; fn(Sl.Value) end
         local function Round(v)
@@ -1268,7 +1298,7 @@ do
 
         if not Info.Compact then
             Jqz:CreateLabel({
-                Size = UDim2.new(1,0,0,10); TextSize = 13; Text = Info.Text;
+                Size = UDim2.new(1, 0, 0, 10); TextSize = 13; Text = Info.Text;
                 TextXAlignment = Enum.TextXAlignment.Left; TextYAlignment = Enum.TextYAlignment.Bottom;
                 ZIndex = 5; Parent = GB.Container;
             })
@@ -1276,61 +1306,61 @@ do
         end
 
         local DOuter = Jqz:Create('Frame', {
-            BackgroundColor3 = Color3.new(0,0,0); BorderColor3 = Color3.new(0,0,0);
-            Size = UDim2.new(1,-4,0,20); ZIndex = 5; Parent = GB.Container;
+            BackgroundColor3 = Color3.new(0, 0, 0); BorderColor3 = Jqz.OutlineColor;
+            Size = UDim2.new(1, -4, 0, 21); ZIndex = 5; Parent = GB.Container;
         })
-        Jqz:AddToRegistry(DOuter, { BorderColor3 = 'Black' })
+        Jqz:AddToRegistry(DOuter, { BorderColor3 = 'OutlineColor' })
         local DInner = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 6; Parent = DOuter;
+            BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 6; Parent = DOuter;
         })
-        Jqz:Corner(DInner, 3)
+        Jqz:Corner(DInner, 5)
         Jqz:AddToRegistry(DInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
         Jqz:Create('UIGradient', {
-            Color = ColorSequence.new({ ColorSequenceKeypoint.new(0,Color3.new(1,1,1)), ColorSequenceKeypoint.new(1,Color3.fromRGB(210,210,210)) });
+            Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 215, 215)) });
             Rotation = 90; Parent = DInner;
         })
         local Arrow = Jqz:Create('ImageLabel', {
-            AnchorPoint = Vector2.new(0,0.5); BackgroundTransparency = 1;
-            Position = UDim2.new(1,-16,0.5,0); Size = UDim2.new(0,12,0,12);
+            AnchorPoint = Vector2.new(0, 0.5); BackgroundTransparency = 1;
+            Position = UDim2.new(1, -17, 0.5, 0); Size = UDim2.new(0, 12, 0, 12);
             Image = 'http://www.roblox.com/asset/?id=6282522798'; ZIndex = 8; Parent = DInner;
         })
         local ItemLbl = Jqz:CreateLabel({
-            Position = UDim2.new(0,5,0,0); Size = UDim2.new(1,-5,1,0);
+            Position = UDim2.new(0, 6, 0, 0); Size = UDim2.new(1, -24, 1, 0);
             TextSize = 13; Text = '--'; TextXAlignment = Enum.TextXAlignment.Left;
             TextWrapped = true; ZIndex = 7; Parent = DInner;
         })
-        Jqz:OnHighlight(DOuter, DOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' })
-        if type(Info.Tooltip)=='string' then Jqz:AddToolTip(Info.Tooltip, DOuter) end
+        Jqz:OnHighlight(DOuter, DOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'OutlineColor' })
+        if type(Info.Tooltip) == 'string' then Jqz:AddToolTip(Info.Tooltip, DOuter) end
 
         local MAX = 8
         local ListOuter = Jqz:Create('Frame', {
-            BackgroundColor3 = Color3.new(0,0,0); BorderColor3 = Color3.new(0,0,0);
+            BackgroundColor3 = Color3.new(0, 0, 0); BorderSizePixel = 0;
             ZIndex = 20; Visible = false; Parent = ScreenGui;
         })
-        local function RPos() ListOuter.Position = UDim2.fromOffset(DOuter.AbsolutePosition.X, DOuter.AbsolutePosition.Y + DOuter.Size.Y.Offset + 1) end
+        local function RPos() ListOuter.Position = UDim2.fromOffset(DOuter.AbsolutePosition.X, DOuter.AbsolutePosition.Y + DOuter.Size.Y.Offset + 3) end
         local function RSze(Y) ListOuter.Size = UDim2.fromOffset(DOuter.AbsoluteSize.X, Y or (MAX*20+2)) end
         RPos(); RSze()
         DOuter:GetPropertyChangedSignal('AbsolutePosition'):Connect(RPos)
 
         local ListInner = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-            BorderMode = Enum.BorderMode.Inset; BorderSizePixel = 0;
-            Size = UDim2.new(1,0,1,0); ZIndex = 21; Parent = ListOuter;
+            BorderMode = Enum.BorderMode.Inset; ClipsDescendants = true;
+            Size = UDim2.new(1, 0, 1, 0); ZIndex = 21; Parent = ListOuter;
         })
-        Jqz:Corner(ListInner, 4)
+        Jqz:Corner(ListInner, 5)
         Jqz:AddToRegistry(ListInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
 
         local Scroll = Jqz:Create('ScrollingFrame', {
             BackgroundTransparency = 1; BorderSizePixel = 0;
-            CanvasSize = UDim2.new(0,0,0,0); Size = UDim2.new(1,0,1,0);
+            CanvasSize = UDim2.new(0, 0, 0, 0); Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 21; Parent = ListInner;
             TopImage = 'rbxasset://textures/ui/Scroll/scroll-middle.png';
             BottomImage = 'rbxasset://textures/ui/Scroll/scroll-middle.png';
             ScrollBarThickness = 3; ScrollBarImageColor3 = Jqz.AccentColor;
         })
         Jqz:AddToRegistry(Scroll, { ScrollBarImageColor3 = 'AccentColor' })
-        Jqz:Create('UIListLayout', { Padding = UDim.new(0,0); FillDirection = Enum.FillDirection.Vertical; SortOrder = Enum.SortOrder.LayoutOrder; Parent = Scroll })
+        Jqz:Create('UIListLayout', { Padding = UDim.new(0, 0); FillDirection = Enum.FillDirection.Vertical; SortOrder = Enum.SortOrder.LayoutOrder; Parent = Scroll })
 
         function DD:Display()
             local s = ''
@@ -1341,7 +1371,7 @@ do
             ItemLbl.Text = s == '' and '--' or s
         end
         function DD:GetActiveValues()
-            if Info.Multi then local t = {} for v in next, DD.Value do table.insert(t,v) end return t
+            if Info.Multi then local t = {} for v in next, DD.Value do table.insert(t, v) end return t
             else return DD.Value and 1 or 0 end
         end
         function DD:BuildList()
@@ -1352,16 +1382,17 @@ do
             for _, Val in next, DD.Values do
                 local T = {}; Count += 1
                 local B = Jqz:Create('Frame', {
-                    BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-                    BorderMode = Enum.BorderMode.Middle; Size = UDim2.new(1,-1,0,20);
+                    BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.MainColor;
+                    BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, -1, 0, 20);
                     ZIndex = 23; Active = true; Parent = Scroll;
                 })
-                Jqz:AddToRegistry(B, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
+                Jqz:Corner(B, 4)
+                Jqz:AddToRegistry(B, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'MainColor' })
                 local BL = Jqz:CreateLabel({
-                    Active = false; Size = UDim2.new(1,-6,1,0); Position = UDim2.new(0,6,0,0);
+                    Active = false; Size = UDim2.new(1, -6, 1, 0); Position = UDim2.new(0, 6, 0, 0);
                     TextSize = 13; Text = Val; TextXAlignment = Enum.TextXAlignment.Left; ZIndex = 25; Parent = B;
                 })
-                Jqz:OnHighlight(B, B, { BorderColor3 = 'AccentColor', ZIndex = 24 }, { BorderColor3 = 'OutlineColor', ZIndex = 23 })
+                Jqz:OnHighlight(B, B, { BorderColor3 = 'AccentColor', ZIndex = 24 }, { BorderColor3 = 'MainColor', ZIndex = 23 })
                 local Sel = Info.Multi and DD.Value[Val] or DD.Value == Val
                 function T:UpdateBtn()
                     Sel = Info.Multi and DD.Value[Val] or DD.Value == Val
@@ -1446,15 +1477,15 @@ do
         local GB = self
         local Depbox = { Dependencies = {} }
         local Holder = Jqz:Create('Frame', {
-            BackgroundTransparency = 1; Size = UDim2.new(1,0,0,0); Visible = false; Parent = GB.Container;
+            BackgroundTransparency = 1; Size = UDim2.new(1, 0, 0, 0); Visible = false; Parent = GB.Container;
         })
         local Frame = Jqz:Create('Frame', {
-            BackgroundTransparency = 1; Size = UDim2.new(1,0,1,0); Visible = true; Parent = Holder;
+            BackgroundTransparency = 1; Size = UDim2.new(1, 0, 1, 0); Visible = true; Parent = Holder;
         })
         local Layout = Jqz:Create('UIListLayout', { FillDirection = Enum.FillDirection.Vertical; SortOrder = Enum.SortOrder.LayoutOrder; Parent = Frame })
 
         function Depbox:Resize()
-            Holder.Size = UDim2.new(1,0,0, Layout.AbsoluteContentSize.Y); GB:Resize()
+            Holder.Size = UDim2.new(1, 0, 0, Layout.AbsoluteContentSize.Y); GB:Resize()
         end
         Layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function() Depbox:Resize() end)
         Holder:GetPropertyChangedSignal('Visible'):Connect(function() Depbox:Resize() end)
@@ -1484,29 +1515,30 @@ end
 
 do
     Jqz.NotificationArea = Jqz:Create('Frame', {
-        BackgroundTransparency = 1; Position = UDim2.new(0,0,0,40);
-        Size = UDim2.new(0,300,0,200); ZIndex = 100; Parent = ScreenGui;
+        BackgroundTransparency = 1; Position = UDim2.new(0, 0, 0, 40);
+        Size = UDim2.new(0, 300, 0, 200); ZIndex = 100; Parent = ScreenGui;
     })
     Jqz:Create('UIListLayout', {
-        Padding = UDim.new(0,4); FillDirection = Enum.FillDirection.Vertical;
+        Padding = UDim.new(0, 5); FillDirection = Enum.FillDirection.Vertical;
         SortOrder = Enum.SortOrder.LayoutOrder; Parent = Jqz.NotificationArea;
     })
 
     local WOuter = Jqz:Create('Frame', {
-        BorderColor3 = Color3.new(0,0,0); Position = UDim2.new(0,100,0,-25);
-        Size = UDim2.new(0,213,0,20); ZIndex = 200; Visible = false; Parent = ScreenGui;
+        BackgroundColor3 = Color3.new(0, 0, 0); BorderSizePixel = 0; Position = UDim2.new(0, 100, 0, -25);
+        Size = UDim2.new(0, 213, 0, 20); ZIndex = 200; Visible = false; Parent = ScreenGui;
     })
+    Jqz:Corner(WOuter, 6, true)
     local WInner = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.AccentColor;
-        BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 201; Parent = WOuter;
+        BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 201; Parent = WOuter;
     })
-    Jqz:Corner(WInner, 4)
-    Jqz:AddToRegistry(WInner, { BorderColor3 = 'AccentColor' })
+    Jqz:Corner(WInner, 6)
+    Jqz:AddToRegistry(WInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'AccentColor' })
     local WFrame = Jqz:Create('Frame', {
-        BackgroundColor3 = Color3.new(1,1,1); BorderSizePixel = 0;
-        Position = UDim2.new(0,1,0,1); Size = UDim2.new(1,-2,1,-2); ZIndex = 202; Parent = WInner;
+        BackgroundColor3 = Color3.new(1, 1, 1); BorderSizePixel = 0;
+        Position = UDim2.new(0, 1, 0, 1); Size = UDim2.new(1, -2, 1, -2); ZIndex = 202; Parent = WInner;
     })
-    Jqz:Corner(WFrame, 3)
+    Jqz:Corner(WFrame, 5, true)
     local WGrad = Jqz:Create('UIGradient', {
         Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Jqz:GetDarkerColor(Jqz.MainColor)), ColorSequenceKeypoint.new(1, Jqz.MainColor) });
         Rotation = -90; Parent = WFrame;
@@ -1515,7 +1547,7 @@ do
         return ColorSequence.new({ ColorSequenceKeypoint.new(0, Jqz:GetDarkerColor(Jqz.MainColor)), ColorSequenceKeypoint.new(1, Jqz.MainColor) })
     end })
     local WLabel = Jqz:CreateLabel({
-        Position = UDim2.new(0,5,0,0); Size = UDim2.new(1,-4,1,0);
+        Position = UDim2.new(0, 6, 0, 0); Size = UDim2.new(1, -4, 1, 0);
         TextSize = 13; TextXAlignment = Enum.TextXAlignment.Left; ZIndex = 203; Parent = WFrame;
     })
     Jqz.Watermark = WOuter
@@ -1523,32 +1555,34 @@ do
     Jqz:MakeDraggable(WOuter)
 
     local KOuter = Jqz:Create('Frame', {
-        AnchorPoint = Vector2.new(0,0.5); BorderColor3 = Color3.new(0,0,0);
-        Position = UDim2.new(0,10,0.5,0); Size = UDim2.new(0,210,0,20);
+        AnchorPoint = Vector2.new(0, 0.5); BackgroundColor3 = Color3.new(0, 0, 0); BorderSizePixel = 0;
+        Position = UDim2.new(0, 10, 0.5, 0); Size = UDim2.new(0, 210, 0, 20);
         Visible = false; ZIndex = 100; Parent = ScreenGui;
     })
+    Jqz:Corner(KOuter, 6, true)
     local KInner = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-        BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 101; Parent = KOuter;
+        BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 101; Parent = KOuter;
     })
-    Jqz:Corner(KInner, 4)
+    Jqz:Corner(KInner, 6)
     Jqz:AddToRegistry(KInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' }, true)
     local KBar = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
-        Size = UDim2.new(1,0,0,2); ZIndex = 102; Parent = KInner;
+        Position = UDim2.new(0, 5, 0, 1); Size = UDim2.new(1, -10, 0, 2); ZIndex = 102; Parent = KInner;
     })
+    Jqz:Corner(KBar, 1, true)
     Jqz:AddToRegistry(KBar, { BackgroundColor3 = 'AccentColor' }, true)
     Jqz:CreateLabel({
-        Size = UDim2.new(1,0,0,20); Position = UDim2.fromOffset(5,2);
+        Size = UDim2.new(1, 0, 0, 20); Position = UDim2.fromOffset(6, 3);
         TextXAlignment = Enum.TextXAlignment.Left; Text = 'Keybinds';
         ZIndex = 104; Parent = KInner;
     })
     local KContainer = Jqz:Create('Frame', {
-        BackgroundTransparency = 1; Size = UDim2.new(1,0,1,-20);
-        Position = UDim2.new(0,0,0,20); ZIndex = 1; Parent = KInner;
+        BackgroundTransparency = 1; Size = UDim2.new(1, 0, 1, -20);
+        Position = UDim2.new(0, 0, 0, 20); ZIndex = 1; Parent = KInner;
     })
     Jqz:Create('UIListLayout', { FillDirection = Enum.FillDirection.Vertical; SortOrder = Enum.SortOrder.LayoutOrder; Parent = KContainer })
-    Jqz:Create('UIPadding', { PaddingLeft = UDim.new(0,5); Parent = KContainer })
+    Jqz:Create('UIPadding', { PaddingLeft = UDim.new(0, 6); Parent = KContainer })
     Jqz.KeybindFrame = KOuter
     Jqz.KeybindContainer = KContainer
     Jqz:MakeDraggable(KOuter)
@@ -1557,30 +1591,30 @@ end
 function Jqz:SetWatermarkVisibility(b) Jqz.Watermark.Visible = b end
 function Jqz:SetWatermark(Text)
     local X, Y = Jqz:GetTextBounds(Text, Jqz.Font, 13)
-    Jqz.Watermark.Size = UDim2.new(0, X+15, 0, (Y*1.5)+3)
+    Jqz.Watermark.Size = UDim2.new(0, X + 16, 0, (Y * 1.5) + 3)
     Jqz:SetWatermarkVisibility(true)
     Jqz.WatermarkText.Text = Text
 end
 
 function Jqz:Notify(Text, Time)
     local X, Y = Jqz:GetTextBounds(Text, Jqz.Font, 13)
-    Y += 7
+    Y += 8
     local NOuter = Jqz:Create('Frame', {
-        BorderColor3 = Color3.new(0,0,0); Position = UDim2.new(0,100,0,10);
-        Size = UDim2.new(0,0,0,Y); ClipsDescendants = true; ZIndex = 100; Parent = Jqz.NotificationArea;
+        BackgroundColor3 = Color3.new(0, 0, 0); BorderSizePixel = 0; Position = UDim2.new(0, 100, 0, 10);
+        Size = UDim2.new(0, 0, 0, Y); ClipsDescendants = true; ZIndex = 100; Parent = Jqz.NotificationArea;
     })
-    Jqz:Corner(NOuter, 4)
+    Jqz:Corner(NOuter, 6, true)
     local NInner = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-        BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 101; Parent = NOuter;
+        BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 1, 0); ZIndex = 101; Parent = NOuter;
     })
-    Jqz:Corner(NInner, 4)
+    Jqz:Corner(NInner, 6)
     Jqz:AddToRegistry(NInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' }, true)
     local NFrame = Jqz:Create('Frame', {
-        BackgroundColor3 = Color3.new(1,1,1); BorderSizePixel = 0;
-        Position = UDim2.new(0,1,0,1); Size = UDim2.new(1,-2,1,-2); ZIndex = 102; Parent = NInner;
+        BackgroundColor3 = Color3.new(1, 1, 1); BorderSizePixel = 0;
+        Position = UDim2.new(0, 1, 0, 1); Size = UDim2.new(1, -2, 1, -2); ZIndex = 102; Parent = NInner;
     })
-    Jqz:Corner(NFrame, 3)
+    Jqz:Corner(NFrame, 5, true)
     local NGrad = Jqz:Create('UIGradient', {
         Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Jqz:GetDarkerColor(Jqz.MainColor)), ColorSequenceKeypoint.new(1, Jqz.MainColor) });
         Rotation = -90; Parent = NFrame;
@@ -1589,19 +1623,19 @@ function Jqz:Notify(Text, Time)
         return ColorSequence.new({ ColorSequenceKeypoint.new(0, Jqz:GetDarkerColor(Jqz.MainColor)), ColorSequenceKeypoint.new(1, Jqz.MainColor) })
     end })
     Jqz:CreateLabel({
-        Position = UDim2.new(0,4,0,0); Size = UDim2.new(1,-4,1,0);
+        Position = UDim2.new(0, 9, 0, 0); Size = UDim2.new(1, -4, 1, 0);
         Text = Text; TextXAlignment = Enum.TextXAlignment.Left; TextSize = 13; ZIndex = 103; Parent = NFrame;
     })
     local NBar = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
-        Position = UDim2.new(0,-1,0,-1); Size = UDim2.new(0,3,1,2); ZIndex = 104; Parent = NOuter;
+        Position = UDim2.new(0, 4, 0, 4); Size = UDim2.new(0, 2, 1, -8); ZIndex = 104; Parent = NOuter;
     })
-    Jqz:Corner(NBar, 2)
+    Jqz:Corner(NBar, 1, true)
     Jqz:AddToRegistry(NBar, { BackgroundColor3 = 'AccentColor' }, true)
-    pcall(NOuter.TweenSize, NOuter, UDim2.new(0, X+12, 0, Y), 'Out', 'Quad', 0.3, true)
+    pcall(NOuter.TweenSize, NOuter, UDim2.new(0, X + 18, 0, Y), 'Out', 'Quad', 0.3, true)
     task.spawn(function()
         wait(Time or 5)
-        pcall(NOuter.TweenSize, NOuter, UDim2.new(0,0,0,Y), 'Out', 'Quad', 0.3, true)
+        pcall(NOuter.TweenSize, NOuter, UDim2.new(0, 0, 0, Y), 'Out', 'Quad', 0.3, true)
         wait(0.3)
         NOuter:Destroy()
     end)
@@ -1610,62 +1644,64 @@ end
 function Jqz:CreateWindow(Config)
     if type(Config) ~= 'table' then Config = { Title = tostring(Config) } end
     Config.Title = type(Config.Title) == 'string' and Config.Title or 'Jqz'
-    Config.TabPadding = type(Config.TabPadding) == 'number' and Config.TabPadding or 0
+    Config.TabPadding = type(Config.TabPadding) == 'number' and Config.TabPadding or 4
     Config.MenuFadeTime = type(Config.MenuFadeTime) == 'number' and Config.MenuFadeTime or 0.2
     Config.AnchorPoint = Config.AnchorPoint or Vector2.zero
     if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
     if typeof(Config.Size) ~= 'UDim2' then Config.Size = UDim2.fromOffset(550, 600) end
-    if Config.Center then Config.AnchorPoint = Vector2.new(0.5,0.5); Config.Position = UDim2.fromScale(0.5,0.5) end
+    if Config.Center then Config.AnchorPoint = Vector2.new(0.5, 0.5); Config.Position = UDim2.fromScale(0.5, 0.5) end
 
     local Window = { Tabs = {} }
 
     local Outer = Jqz:Create('Frame', {
-        AnchorPoint = Config.AnchorPoint; BackgroundColor3 = Color3.new(0,0,0);
+        AnchorPoint = Config.AnchorPoint; BackgroundColor3 = Color3.new(0, 0, 0);
         BorderSizePixel = 0; Position = Config.Position; Size = Config.Size;
         Visible = false; ZIndex = 1; Parent = ScreenGui;
     })
+    Jqz:Corner(Outer, 9, true)
     Jqz:MakeDraggable(Outer, 25)
 
     local Inner = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.AccentColor;
         BorderMode = Enum.BorderMode.Inset;
-        Position = UDim2.new(0,1,0,1); Size = UDim2.new(1,-2,1,-2);
+        Position = UDim2.new(0, 1, 0, 1); Size = UDim2.new(1, -2, 1, -2);
         ZIndex = 1; Parent = Outer;
     })
-    Jqz:Corner(Inner, 5)
+    Jqz:Corner(Inner, 8)
     Jqz:AddToRegistry(Inner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'AccentColor' })
 
     local TitleBar = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
-        Size = UDim2.new(1,0,0,25); ZIndex = 2; Parent = Inner;
+        Size = UDim2.new(1, 0, 0, 26); ZIndex = 2; Parent = Inner;
     })
-    Jqz:Corner(TitleBar, 4)
+    Jqz:Corner(TitleBar, 8, true)
     Jqz:AddToRegistry(TitleBar, { BackgroundColor3 = 'AccentColor' })
-    Jqz:Create('Frame', {
+    local TitleCover = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
-        Position = UDim2.new(0,0,0.5,0); Size = UDim2.new(1,0,0.5,0); ZIndex = 2; Parent = TitleBar;
+        Position = UDim2.new(0, 0, 0.5, 0); Size = UDim2.new(1, 0, 0.5, 0); ZIndex = 2; Parent = TitleBar;
     })
+    Jqz:AddToRegistry(TitleCover, { BackgroundColor3 = 'AccentColor' })
 
     local TitleLabel = Jqz:CreateLabel({
-        Position = UDim2.new(0,9,0,0); Size = UDim2.new(1,0,1,0);
+        Position = UDim2.new(0, 10, 0, 0); Size = UDim2.new(1, 0, 1, 0);
         Text = Config.Title; TextXAlignment = Enum.TextXAlignment.Left; ZIndex = 3; Parent = TitleBar;
     })
 
     local MainOuter = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
-        Position = UDim2.new(0,8,0,25); Size = UDim2.new(1,-16,1,-33);
+        Position = UDim2.new(0, 8, 0, 33); Size = UDim2.new(1, -16, 1, -41);
         ZIndex = 1; Parent = Inner;
     })
+    Jqz:Corner(MainOuter, 7)
     Jqz:AddToRegistry(MainOuter, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
     local MainInner = Jqz:Create('Frame', {
-        BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Color3.new(0,0,0);
-        BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,1,0); ZIndex = 1; Parent = MainOuter;
+        BackgroundTransparency = 1; BorderSizePixel = 0;
+        Size = UDim2.new(1, 0, 1, 0); ZIndex = 1; Parent = MainOuter;
     })
-    Jqz:AddToRegistry(MainInner, { BackgroundColor3 = 'BackgroundColor' })
 
     local TabArea = Jqz:Create('Frame', {
-        BackgroundTransparency = 1; Position = UDim2.new(0,8,0,8);
-        Size = UDim2.new(1,-16,0,21); ZIndex = 1; Parent = MainInner;
+        BackgroundTransparency = 1; Position = UDim2.new(0, 8, 0, 8);
+        Size = UDim2.new(1, -16, 0, 22); ZIndex = 1; Parent = MainInner;
     })
     local TabLayout = Jqz:Create('UIListLayout', {
         Padding = UDim.new(0, Config.TabPadding); FillDirection = Enum.FillDirection.Horizontal;
@@ -1673,9 +1709,10 @@ function Jqz:CreateWindow(Config)
     })
     local TabContainer = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.MainColor; BorderColor3 = Jqz.OutlineColor;
-        Position = UDim2.new(0,8,0,30); Size = UDim2.new(1,-16,1,-38);
+        Position = UDim2.new(0, 8, 0, 36); Size = UDim2.new(1, -16, 1, -44);
         ZIndex = 2; Parent = MainInner;
     })
+    Jqz:Corner(TabContainer, 6)
     Jqz:AddToRegistry(TabContainer, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor' })
 
     function Window:SetWindowTitle(t) TitleLabel.Text = t end
@@ -1686,35 +1723,29 @@ function Jqz:CreateWindow(Config)
         local BtnW = Jqz:GetTextBounds(Name, Jqz.Font, 13)
         local TabBtn = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
-            Size = UDim2.new(0, BtnW+12, 1, 0); ZIndex = 1; Parent = TabArea;
+            Size = UDim2.new(0, BtnW + 16, 1, 0); ZIndex = 1; Parent = TabArea;
         })
-        Jqz:Corner(TabBtn, 3)
+        Jqz:Corner(TabBtn, 5)
         Jqz:AddToRegistry(TabBtn, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
         Jqz:CreateLabel({
-            Position = UDim2.new(0,0,0,0); Size = UDim2.new(1,0,1,-1);
+            Position = UDim2.new(0, 0, 0, 0); Size = UDim2.new(1, 0, 1, 0);
             Text = Name; TextSize = 13; ZIndex = 1; Parent = TabBtn;
         })
-        local Blocker = Jqz:Create('Frame', {
-            BackgroundColor3 = Jqz.MainColor; BorderSizePixel = 0;
-            Position = UDim2.new(0,0,1,0); Size = UDim2.new(1,0,0,1);
-            BackgroundTransparency = 1; ZIndex = 3; Parent = TabBtn;
-        })
-        Jqz:AddToRegistry(Blocker, { BackgroundColor3 = 'MainColor' })
 
         local TabFrame = Jqz:Create('Frame', {
             Name = 'TabFrame'; BackgroundTransparency = 1;
-            Size = UDim2.new(1,0,1,0); Visible = false; ZIndex = 2; Parent = TabContainer;
+            Size = UDim2.new(1, 0, 1, 0); Visible = false; ZIndex = 2; Parent = TabContainer;
         })
 
         local function MakeSide(xPos, xSize)
             local s = Jqz:Create('ScrollingFrame', {
                 BackgroundTransparency = 1; BorderSizePixel = 0;
                 Position = xPos; Size = xSize;
-                CanvasSize = UDim2.new(0,0,0,0); BottomImage = ''; TopImage = '';
+                CanvasSize = UDim2.new(0, 0, 0, 0); BottomImage = ''; TopImage = '';
                 ScrollBarThickness = 0; ZIndex = 2; Parent = TabFrame;
             })
             Jqz:Create('UIListLayout', {
-                Padding = UDim.new(0,8); FillDirection = Enum.FillDirection.Vertical;
+                Padding = UDim.new(0, 8); FillDirection = Enum.FillDirection.Vertical;
                 SortOrder = Enum.SortOrder.LayoutOrder; HorizontalAlignment = Enum.HorizontalAlignment.Center;
                 Parent = s;
             })
@@ -1723,20 +1754,24 @@ function Jqz:CreateWindow(Config)
             end)
             return s
         end
-        local LeftSide = MakeSide(UDim2.new(0,7,0,7), UDim2.new(0.5,-11,0,509))
-        local RightSide = MakeSide(UDim2.new(0.5,5,0,7), UDim2.new(0.5,-11,0,509))
+        local LeftSide = MakeSide(UDim2.new(0, 7, 0, 7), UDim2.new(0.5, -11, 0, 509))
+        local RightSide = MakeSide(UDim2.new(0.5, 5, 0, 7), UDim2.new(0.5, -11, 0, 509))
 
         function Tab:ShowTab()
             for _, t in next, Window.Tabs do t:HideTab() end
-            Blocker.BackgroundTransparency = 0
             TabBtn.BackgroundColor3 = Jqz.MainColor
+            TabBtn.BorderColor3 = Jqz.AccentColor
             Jqz.RegistryMap[TabBtn].Properties.BackgroundColor3 = 'MainColor'
+            Jqz.RegistryMap[TabBtn].Properties.BorderColor3 = 'AccentColor'
+            Jqz:SyncStroke(TabBtn)
             TabFrame.Visible = true
         end
         function Tab:HideTab()
-            Blocker.BackgroundTransparency = 1
             TabBtn.BackgroundColor3 = Jqz.BackgroundColor
+            TabBtn.BorderColor3 = Jqz.OutlineColor
             Jqz.RegistryMap[TabBtn].Properties.BackgroundColor3 = 'BackgroundColor'
+            Jqz.RegistryMap[TabBtn].Properties.BorderColor3 = 'OutlineColor'
+            Jqz:SyncStroke(TabBtn)
             TabFrame.Visible = false
         end
         function Tab:SetLayoutOrder(n) TabBtn.LayoutOrder = n; TabLayout:ApplyLayout() end
@@ -1747,30 +1782,29 @@ function Jqz:CreateWindow(Config)
 
             local BOuter = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
-                BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,0,509);
+                BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 0, 509);
                 ZIndex = 2; Parent = Side;
             })
-            Jqz:Corner(BOuter, 4)
+            Jqz:Corner(BOuter, 7)
             Jqz:AddToRegistry(BOuter, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
             local BInner = Jqz:Create('Frame', {
-                BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Color3.new(0,0,0);
-                Size = UDim2.new(1,-2,1,-2); Position = UDim2.new(0,1,0,1); ZIndex = 4; Parent = BOuter;
+                BackgroundTransparency = 1; BorderSizePixel = 0;
+                Size = UDim2.new(1, -2, 1, -2); Position = UDim2.new(0, 1, 0, 1); ZIndex = 4; Parent = BOuter;
             })
-            Jqz:Corner(BInner, 3)
-            Jqz:AddToRegistry(BInner, { BackgroundColor3 = 'BackgroundColor' })
             local BBar = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
-                Size = UDim2.new(1,0,0,2); ZIndex = 5; Parent = BInner;
+                Position = UDim2.new(0, 6, 0, 1); Size = UDim2.new(1, -12, 0, 2); ZIndex = 5; Parent = BInner;
             })
+            Jqz:Corner(BBar, 1, true)
             Jqz:AddToRegistry(BBar, { BackgroundColor3 = 'AccentColor' })
             Jqz:CreateLabel({
-                Size = UDim2.new(1,0,0,18); Position = UDim2.new(0,4,0,2);
+                Size = UDim2.new(1, 0, 0, 18); Position = UDim2.new(0, 6, 0, 3);
                 TextSize = 13; Text = Info.Name; TextXAlignment = Enum.TextXAlignment.Left;
                 ZIndex = 5; Parent = BInner;
             })
             local Container = Jqz:Create('Frame', {
-                BackgroundTransparency = 1; Position = UDim2.new(0,4,0,20);
-                Size = UDim2.new(1,-4,1,-20); ZIndex = 1; Parent = BInner;
+                BackgroundTransparency = 1; Position = UDim2.new(0, 5, 0, 22);
+                Size = UDim2.new(1, -5, 1, -22); ZIndex = 1; Parent = BInner;
             })
             Jqz:Create('UIListLayout', { FillDirection = Enum.FillDirection.Vertical; SortOrder = Enum.SortOrder.LayoutOrder; Parent = Container })
 
@@ -1779,7 +1813,7 @@ function Jqz:CreateWindow(Config)
                 for _, el in next, GB.Container:GetChildren() do
                     if not el:IsA('UIListLayout') and el.Visible then sz += el.Size.Y.Offset end
                 end
-                BOuter.Size = UDim2.new(1,0,0, 20 + sz + 4)
+                BOuter.Size = UDim2.new(1, 0, 0, 22 + sz + 4)
             end
             GB.Container = Container
             setmetatable(GB, BaseGroupbox)
@@ -1797,61 +1831,54 @@ function Jqz:CreateWindow(Config)
 
             local BOuter = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Jqz.OutlineColor;
-                BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1,0,0,0);
+                BorderMode = Enum.BorderMode.Inset; Size = UDim2.new(1, 0, 0, 0);
                 ZIndex = 2; Parent = Side;
             })
-            Jqz:Corner(BOuter, 4)
+            Jqz:Corner(BOuter, 7)
             Jqz:AddToRegistry(BOuter, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor' })
             local BInner = Jqz:Create('Frame', {
-                BackgroundColor3 = Jqz.BackgroundColor; BorderColor3 = Color3.new(0,0,0);
-                Size = UDim2.new(1,-2,1,-2); Position = UDim2.new(0,1,0,1); ZIndex = 4; Parent = BOuter;
+                BackgroundTransparency = 1; BorderSizePixel = 0;
+                Size = UDim2.new(1, -2, 1, -2); Position = UDim2.new(0, 1, 0, 1); ZIndex = 4; Parent = BOuter;
             })
-            Jqz:Corner(BInner, 3)
-            Jqz:AddToRegistry(BInner, { BackgroundColor3 = 'BackgroundColor' })
             local BBar = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.AccentColor; BorderSizePixel = 0;
-                Size = UDim2.new(1,0,0,2); ZIndex = 10; Parent = BInner;
+                Position = UDim2.new(0, 6, 0, 1); Size = UDim2.new(1, -12, 0, 2); ZIndex = 10; Parent = BInner;
             })
+            Jqz:Corner(BBar, 1, true)
             Jqz:AddToRegistry(BBar, { BackgroundColor3 = 'AccentColor' })
             local TabboxBtns = Jqz:Create('Frame', {
-                BackgroundTransparency = 1; Position = UDim2.new(0,0,0,1);
-                Size = UDim2.new(1,0,0,18); ZIndex = 5; Parent = BInner;
+                BackgroundTransparency = 1; Position = UDim2.new(0, 3, 0, 4);
+                Size = UDim2.new(1, -6, 0, 18); ZIndex = 5; Parent = BInner;
             })
             Jqz:Create('UIListLayout', { FillDirection = Enum.FillDirection.Horizontal; HorizontalAlignment = Enum.HorizontalAlignment.Left; SortOrder = Enum.SortOrder.LayoutOrder; Parent = TabboxBtns })
 
             function Tabbox:AddTab(Name)
                 local IT = {}
                 local Btn = Jqz:Create('Frame', {
-                    BackgroundColor3 = Jqz.MainColor; BorderColor3 = Color3.new(0,0,0);
-                    Size = UDim2.new(0.5,0,1,0); ZIndex = 6; Parent = TabboxBtns;
+                    BackgroundColor3 = Jqz.MainColor; BorderSizePixel = 0;
+                    Size = UDim2.new(0.5, 0, 1, 0); ZIndex = 6; Parent = TabboxBtns;
                 })
-                Jqz:Corner(Btn, 2)
+                Jqz:Corner(Btn, 4, true)
                 Jqz:AddToRegistry(Btn, { BackgroundColor3 = 'MainColor' })
                 Jqz:CreateLabel({
-                    Size = UDim2.new(1,0,1,0); TextSize = 13; Text = Name;
+                    Size = UDim2.new(1, 0, 1, 0); TextSize = 13; Text = Name;
                     TextXAlignment = Enum.TextXAlignment.Center; ZIndex = 7; Parent = Btn;
                 })
-                local Block = Jqz:Create('Frame', {
-                    BackgroundColor3 = Jqz.BackgroundColor; BorderSizePixel = 0;
-                    Position = UDim2.new(0,0,1,0); Size = UDim2.new(1,0,0,1);
-                    Visible = false; ZIndex = 9; Parent = Btn;
-                })
-                Jqz:AddToRegistry(Block, { BackgroundColor3 = 'BackgroundColor' })
                 local Container = Jqz:Create('Frame', {
-                    BackgroundTransparency = 1; Position = UDim2.new(0,4,0,20);
-                    Size = UDim2.new(1,-4,1,-20); ZIndex = 1; Visible = false; Parent = BInner;
+                    BackgroundTransparency = 1; Position = UDim2.new(0, 5, 0, 24);
+                    Size = UDim2.new(1, -5, 1, -24); ZIndex = 1; Visible = false; Parent = BInner;
                 })
                 Jqz:Create('UIListLayout', { FillDirection = Enum.FillDirection.Vertical; SortOrder = Enum.SortOrder.LayoutOrder; Parent = Container })
 
                 function IT:Show()
                     for _, t in next, Tabbox.Tabs do t:Hide() end
-                    Container.Visible = true; Block.Visible = true
+                    Container.Visible = true
                     Btn.BackgroundColor3 = Jqz.BackgroundColor
                     Jqz.RegistryMap[Btn].Properties.BackgroundColor3 = 'BackgroundColor'
                     IT:Resize()
                 end
                 function IT:Hide()
-                    Container.Visible = false; Block.Visible = false
+                    Container.Visible = false
                     Btn.BackgroundColor3 = Jqz.MainColor
                     Jqz.RegistryMap[Btn].Properties.BackgroundColor3 = 'MainColor'
                 end
@@ -1866,7 +1893,7 @@ function Jqz:CreateWindow(Config)
                     for _, el in next, IT.Container:GetChildren() do
                         if not el:IsA('UIListLayout') and el.Visible then sz += el.Size.Y.Offset end
                     end
-                    BOuter.Size = UDim2.new(1,0,0, 20 + sz + 4)
+                    BOuter.Size = UDim2.new(1, 0, 0, 24 + sz + 4)
                 end
                 Btn.InputBegan:Connect(function(i)
                     if i.UserInputType == Enum.UserInputType.MouseButton1 and not Jqz:MouseIsOverOpenedFrame() then
@@ -1891,13 +1918,13 @@ function Jqz:CreateWindow(Config)
         TabBtn.InputBegan:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseButton1 then Tab:ShowTab() end
         end)
-        if #TabContainer:GetChildren() == 1 then Tab:ShowTab() end
+        if #TabContainer:GetChildren() == 2 then Tab:ShowTab() end
         Window.Tabs[Name] = Tab
         return Tab
     end
 
     local Modal = Jqz:Create('TextButton', {
-        BackgroundTransparency = 1; Size = UDim2.new(0,0,0,0);
+        BackgroundTransparency = 1; Size = UDim2.new(0, 0, 0, 0);
         Visible = true; Text = ''; Modal = false; Parent = ScreenGui;
     })
     local Cache, Toggled, Fading = {}, false, false
@@ -1915,7 +1942,7 @@ function Jqz:CreateWindow(Config)
                 local Cur = Drawing.new('Triangle')
                 Cur.Thickness = 1; Cur.Filled = true; Cur.Visible = true
                 local CurO = Drawing.new('Triangle')
-                CurO.Thickness = 1; CurO.Filled = false; CurO.Color = Color3.new(0,0,0); CurO.Visible = true
+                CurO.Thickness = 1; CurO.Filled = false; CurO.Color = Color3.new(0, 0, 0); CurO.Visible = true
                 while Toggled and ScreenGui.Parent do
                     InputService.MouseIconEnabled = false
                     local mp = InputService:GetMouseLocation()
@@ -1934,13 +1961,13 @@ function Jqz:CreateWindow(Config)
         for _, d in next, Outer:GetDescendants() do
             local props = {}
             if d:IsA('ImageLabel') then
-                table.insert(props,'ImageTransparency'); table.insert(props,'BackgroundTransparency')
+                table.insert(props, 'ImageTransparency'); table.insert(props, 'BackgroundTransparency')
             elseif d:IsA('TextLabel') or d:IsA('TextBox') then
-                table.insert(props,'TextTransparency')
+                table.insert(props, 'TextTransparency')
             elseif d:IsA('Frame') or d:IsA('ScrollingFrame') then
-                table.insert(props,'BackgroundTransparency')
+                table.insert(props, 'BackgroundTransparency')
             elseif d:IsA('UIStroke') then
-                table.insert(props,'Transparency')
+                table.insert(props, 'Transparency')
             end
             local c = Cache[d]
             if not c then c = {}; Cache[d] = c end
