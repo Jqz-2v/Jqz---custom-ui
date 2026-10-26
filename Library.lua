@@ -38,7 +38,7 @@ local abs = math.abs
 local CONFIG_FOLDER = "/cfgs"
 
 if getgenv().library then
-	getgenv().library:unload()
+    pcall(function() getgenv().library:unload() end)
 end
 
 getgenv().library = {
