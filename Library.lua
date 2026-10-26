@@ -23,6 +23,74 @@ local Options = {};
 getgenv().Toggles = Toggles;
 getgenv().Options = Options;
 
+local AssetFolder = 'Jqz';
+
+local AssetSources = {
+    Background = {
+        File = 'background.png';
+        Url = 'https://res.cloudinary.com/w8q7jrey/image/upload/v1793013812/Wallpaper%20backgrounds/2604F265-1085-4668-9C60-2CF7AB8C98BA.png';
+    };
+
+    Icon = {
+        File = 'icon.png';
+        Url = 'https://res.cloudinary.com/w8q7jrey/image/upload/v1793013813/Wallpaper%20backgrounds/D9C7B261-1143-455D-ABE7-85F9EB27B790.png';
+    };
+};
+
+local GetAsset = getcustomasset or getsynasset;
+local HttpRequest = (syn and syn.request) or http_request or request;
+
+local function Download(Url)
+    local Success, Body = pcall(function()
+        return game:HttpGet(Url);
+    end);
+
+    if Success and type(Body) == 'string' and #Body > 0 then
+        return Body;
+    end;
+
+    if HttpRequest then
+        local RequestSuccess, Response = pcall(HttpRequest, {
+            Url = Url;
+            Method = 'GET';
+        });
+
+        if RequestSuccess and type(Response) == 'table' and type(Response.Body) == 'string' and #Response.Body > 0 then
+            return Response.Body;
+        end;
+    end;
+end;
+
+local function LoadAsset(Source)
+    if not (GetAsset and writefile and readfile and isfile and isfolder and makefolder) then
+        return;
+    end;
+
+    local Success, Result = pcall(function()
+        if not isfolder(AssetFolder) then
+            makefolder(AssetFolder);
+        end;
+
+        local Path = AssetFolder .. '/' .. Source.File;
+
+        if not isfile(Path) or #readfile(Path) == 0 then
+            local Body = Download(Source.Url);
+
+            if not Body then
+                return;
+            end;
+
+            writefile(Path, Body);
+        end;
+
+        return GetAsset(Path);
+    end);
+
+    if Success then
+        return Result;
+    end;
+end;
+
 local Jqz = {
     Registry = {};
     RegistryMap = {};
@@ -38,6 +106,9 @@ local Jqz = {
 
     Black = Color3.new(0, 0, 0);
     Font = Enum.Font.Code,
+
+    PanelTransparency = 0.5;
+    BoxTransparency = 0.4;
 
     OpenedFrames = {};
     DependencyBoxes = {};
@@ -130,6 +201,21 @@ function Jqz:Create(Class, Properties)
     end;
 
     return _Instance;
+end;
+
+function Jqz:Stroke(Target, ColorName)
+    local Stroke = Jqz:Create('UIStroke', {
+        Color = Jqz[ColorName];
+        Thickness = 1;
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+        Parent = Target;
+    });
+
+    Jqz:AddToRegistry(Stroke, {
+        Color = ColorName;
+    });
+
+    return Stroke;
 end;
 
 function Jqz:ApplyTextStroke(Inst)
@@ -365,18 +451,15 @@ function Jqz:UpdateColorsUsingRegistry()
 end;
 
 function Jqz:GiveSignal(Signal)
-    -- Only used for signals not attached to library instances, as those should be cleaned up on object destruction by Roblox
     table.insert(Jqz.Signals, Signal)
 end
 
 function Jqz:Unload()
-    -- Unload all of the signals
     for Idx = #Jqz.Signals, 1, -1 do
         local Connection = table.remove(Jqz.Signals, Idx)
         Connection:Disconnect()
     end
 
-     -- Call our unload callback, maybe to undo some hooks etc
     if Jqz.OnUnload then
         Jqz.OnUnload()
     end
@@ -431,7 +514,6 @@ do
             Parent = ToggleLabel;
         });
 
-        -- Transparency image taken from https://github.com/matas3535/SplixPrivateDrawingLibrary/blob/main/Library.lua cus i'm lazy
         local CheckerFrame = Jqz:Create('ImageLabel', {
             BorderSizePixel = 0;
             Size = UDim2.new(0, 27, 0, 13);
@@ -991,7 +1073,7 @@ do
         local KeyPicker = {
             Value = Info.Default;
             Toggled = false;
-            Mode = Info.Mode or 'Toggle'; -- Always, Toggle, Hold
+            Mode = Info.Mode or 'Toggle';
             Type = 'KeyPicker';
             Callback = Info.Callback or function(Value) end;
             ChangedCallback = Info.ChangedCallback or function(New) end;
@@ -1323,6 +1405,10 @@ do
         local Groupbox = self;
         local Container = Groupbox.Container;
 
+        if Size >= 5 then
+            Size = Size + 2;
+        end;
+
         Jqz:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(1, 0, 0, Size);
@@ -1410,7 +1496,7 @@ do
             local Outer = Jqz:Create('Frame', {
                 BackgroundColor3 = Color3.new(0, 0, 0);
                 BorderColor3 = Color3.new(0, 0, 0);
-                Size = UDim2.new(1, -4, 0, 20);
+                Size = UDim2.new(1, -4, 0, 22);
                 ZIndex = 5;
             });
 
@@ -1536,7 +1622,7 @@ do
 
             ProcessButtonParams('SubButton', SubButton, ...)
 
-            self.Outer.Size = UDim2.new(0.5, -2, 0, 20)
+            self.Outer.Size = UDim2.new(0.5, -2, 0, 22)
 
             SubButton.Outer, SubButton.Inner, SubButton.Label = CreateBaseButton(SubButton)
 
@@ -1636,7 +1722,7 @@ do
         local TextBoxOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
-            Size = UDim2.new(1, -4, 0, 20);
+            Size = UDim2.new(1, -4, 0, 22);
             ZIndex = 5;
             Parent = Container;
         });
@@ -1738,28 +1824,20 @@ do
             end);
         end
 
-        -- https://devforum.roblox.com/t/how-to-make-textboxes-follow-current-cursor-position/1368429/6
-        -- thank you nicemike40 :)
-
         local function Update()
             local PADDING = 2
             local reveal = Container.AbsoluteSize.X
 
             if not Box:IsFocused() or Box.TextBounds.X <= reveal - 2 * PADDING then
-                -- we aren't focused, or we fit so be normal
                 Box.Position = UDim2.new(0, PADDING, 0, 0)
             else
-                -- we are focused and don't fit, so adjust position
                 local cursor = Box.CursorPosition
                 if cursor ~= -1 then
-                    -- calculate pixel width of text from start to cursor
                     local subtext = string.sub(Box.Text, 1, cursor-1)
                     local width = TextService:GetTextSize(subtext, Box.TextSize, Box.Font, Vector2.new(math.huge, math.huge)).X
 
-                    -- check if we're inside the box with the cursor
                     local currentCursorPos = Box.Position.X.Offset + width
 
-                    -- adjust if necessary
                     if currentCursorPos < PADDING then
                         Box.Position = UDim2.fromOffset(PADDING-width, 0)
                     elseif currentCursorPos > reveal - PADDING - 1 then
@@ -1968,7 +2046,7 @@ do
         local SliderOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
-            Size = UDim2.new(1, -4, 0, 13);
+            Size = UDim2.new(1, -4, 0, 15);
             ZIndex = 5;
             Parent = Container;
         });
@@ -2117,6 +2195,15 @@ do
             end;
         end);
 
+        SliderInner:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()
+            local Width = SliderInner.AbsoluteSize.X - 6;
+
+            if Width > 0 and Width ~= Slider.MaxSize then
+                Slider.MaxSize = Width;
+                Slider:Display();
+            end;
+        end);
+
         Slider:Display();
         Groupbox:AddBlank(Info.BlankSize or 6);
         Groupbox:Resize();
@@ -2147,7 +2234,7 @@ do
             Value = Info.Multi and {};
             Multi = Info.Multi;
             Type = 'Dropdown';
-            SpecialType = Info.SpecialType; -- can be either 'Player' or 'Team'
+            SpecialType = Info.SpecialType;
             Callback = Info.Callback or function(Value) end;
         };
 
@@ -2179,7 +2266,7 @@ do
         local DropdownOuter = Jqz:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
-            Size = UDim2.new(1, -4, 0, 20);
+            Size = UDim2.new(1, -4, 0, 22);
             ZIndex = 5;
             Parent = Container;
         });
@@ -2656,7 +2743,6 @@ do
     end;
 end;
 
--- < Create other UI elements >
 do
     Jqz.NotificationArea = Jqz:Create('Frame', {
         BackgroundTransparency = 1;
@@ -2920,7 +3006,7 @@ function Jqz:CreateWindow(...)
     end
 
     if type(Config.Title) ~= 'string' then Config.Title = 'Jqz' end
-    if type(Config.TabPadding) ~= 'number' then Config.TabPadding = 0 end
+    if type(Config.TabPadding) ~= 'number' then Config.TabPadding = 2 end
     if type(Config.MenuFadeTime) ~= 'number' then Config.MenuFadeTime = 0.2 end
 
     if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
@@ -2946,64 +3032,112 @@ function Jqz:CreateWindow(...)
         Parent = ScreenGui;
     });
 
+    Jqz:Create('UICorner', {
+        CornerRadius = UDim.new(0, 10);
+        Parent = Outer;
+    });
+
     Jqz:MakeDraggable(Outer, 25);
 
     local Inner = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.MainColor;
-        BorderColor3 = Jqz.AccentColor;
-        BorderMode = Enum.BorderMode.Inset;
-        Position = UDim2.new(0, 1, 0, 1);
-        Size = UDim2.new(1, -2, 1, -2);
+        BorderSizePixel = 0;
+        Position = UDim2.new(0, 2, 0, 2);
+        Size = UDim2.new(1, -4, 1, -4);
         ZIndex = 1;
         Parent = Outer;
     });
 
+    Jqz:Create('UICorner', {
+        CornerRadius = UDim.new(0, 8);
+        Parent = Inner;
+    });
+
     Jqz:AddToRegistry(Inner, {
         BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'AccentColor';
+    });
+
+    Jqz:Stroke(Inner, 'AccentColor');
+
+    local Background = Jqz:Create('ImageLabel', {
+        BackgroundTransparency = 1;
+        BorderSizePixel = 0;
+        Image = '';
+        ImageTransparency = 0.2;
+        ScaleType = Enum.ScaleType.Crop;
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 1;
+        Parent = Inner;
+    });
+
+    Jqz:Create('UICorner', {
+        CornerRadius = UDim.new(0, 8);
+        Parent = Background;
+    });
+
+    local WindowIcon = Jqz:Create('ImageLabel', {
+        BackgroundTransparency = 1;
+        BorderSizePixel = 0;
+        Image = '';
+        Position = UDim2.new(0, 10, 0, 6);
+        ScaleType = Enum.ScaleType.Fit;
+        Size = UDim2.new(0, 20, 0, 20);
+        Visible = false;
+        ZIndex = 2;
+        Parent = Inner;
     });
 
     local WindowLabel = Jqz:CreateLabel({
-        Position = UDim2.new(0, 7, 0, 0);
-        Size = UDim2.new(0, 0, 0, 25);
+        Position = UDim2.new(0, 10, 0, 0);
+        Size = UDim2.new(0, 0, 0, 32);
         Text = Config.Title or '';
         TextXAlignment = Enum.TextXAlignment.Left;
-        ZIndex = 1;
+        ZIndex = 2;
         Parent = Inner;
     });
+
+    task.spawn(function()
+        local BackgroundAsset = LoadAsset(AssetSources.Background);
+
+        if BackgroundAsset then
+            Background.Image = BackgroundAsset;
+        end;
+
+        local IconAsset = LoadAsset(AssetSources.Icon);
+
+        if IconAsset then
+            WindowIcon.Image = IconAsset;
+            WindowIcon.Visible = true;
+            WindowLabel.Position = UDim2.new(0, 36, 0, 0);
+        end;
+    end);
 
     local MainSectionOuter = Jqz:Create('Frame', {
-        BackgroundColor3 = Jqz.BackgroundColor;
-        BorderColor3 = Jqz.OutlineColor;
-        Position = UDim2.new(0, 8, 0, 25);
-        Size = UDim2.new(1, -16, 1, -33);
+        BackgroundTransparency = 1;
+        BorderSizePixel = 0;
+        Position = UDim2.new(0, 8, 0, 34);
+        Size = UDim2.new(1, -16, 1, -42);
         ZIndex = 1;
         Parent = Inner;
     });
 
-    Jqz:AddToRegistry(MainSectionOuter, {
-        BackgroundColor3 = 'BackgroundColor';
-        BorderColor3 = 'OutlineColor';
-    });
+    Jqz:Stroke(MainSectionOuter, 'OutlineColor');
 
     local MainSectionInner = Jqz:Create('Frame', {
-        BackgroundColor3 = Jqz.BackgroundColor;
-        BorderColor3 = Color3.new(0, 0, 0);
-        BorderMode = Enum.BorderMode.Inset;
-        Position = UDim2.new(0, 0, 0, 0);
-        Size = UDim2.new(1, 0, 1, 0);
+        BackgroundTransparency = 1;
+        BorderSizePixel = 0;
+        Position = UDim2.new(0, 1, 0, 1);
+        Size = UDim2.new(1, -2, 1, -2);
         ZIndex = 1;
         Parent = MainSectionOuter;
     });
 
-    Jqz:AddToRegistry(MainSectionInner, {
-        BackgroundColor3 = 'BackgroundColor';
-    });
+    Jqz:Stroke(MainSectionInner, 'Black');
 
     local TabArea = Jqz:Create('Frame', {
         BackgroundTransparency = 1;
-        Position = UDim2.new(0, 8, 0, 8);
-        Size = UDim2.new(1, -16, 0, 21);
+        Position = UDim2.new(0, 8, 0, 10);
+        Size = UDim2.new(1, -16, 0, 23);
         ZIndex = 1;
         Parent = MainSectionInner;
     });
@@ -3017,17 +3151,19 @@ function Jqz:CreateWindow(...)
 
     local TabContainer = Jqz:Create('Frame', {
         BackgroundColor3 = Jqz.MainColor;
-        BorderColor3 = Jqz.OutlineColor;
-        Position = UDim2.new(0, 8, 0, 30);
-        Size = UDim2.new(1, -16, 1, -38);
+        BackgroundTransparency = Jqz.PanelTransparency;
+        BorderSizePixel = 0;
+        Position = UDim2.new(0, 8, 0, 34);
+        Size = UDim2.new(1, -16, 1, -44);
         ZIndex = 2;
         Parent = MainSectionInner;
     });
 
     Jqz:AddToRegistry(TabContainer, {
         BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'OutlineColor';
     });
+
+    Jqz:Stroke(TabContainer, 'OutlineColor');
 
     function Window:SetWindowTitle(Title)
         WindowLabel.Text = Title;
@@ -3043,16 +3179,18 @@ function Jqz:CreateWindow(...)
 
         local TabButton = Jqz:Create('Frame', {
             BackgroundColor3 = Jqz.BackgroundColor;
-            BorderColor3 = Jqz.OutlineColor;
-            Size = UDim2.new(0, TabButtonWidth + 8 + 4, 1, 0);
+            BackgroundTransparency = Jqz.PanelTransparency;
+            BorderSizePixel = 0;
+            Size = UDim2.new(0, TabButtonWidth + 8 + 12, 1, 0);
             ZIndex = 1;
             Parent = TabArea;
         });
 
         Jqz:AddToRegistry(TabButton, {
             BackgroundColor3 = 'BackgroundColor';
-            BorderColor3 = 'OutlineColor';
         });
+
+        Jqz:Stroke(TabButton, 'OutlineColor');
 
         local TabButtonLabel = Jqz:CreateLabel({
             Position = UDim2.new(0, 0, 0, 0);
@@ -3089,8 +3227,8 @@ function Jqz:CreateWindow(...)
         local LeftSide = Jqz:Create('ScrollingFrame', {
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
-            Position = UDim2.new(0, 8 - 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
+            Position = UDim2.new(0, 8, 0, 10);
+            Size = UDim2.new(0.5, -12, 0, 507 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -3102,8 +3240,8 @@ function Jqz:CreateWindow(...)
         local RightSide = Jqz:Create('ScrollingFrame', {
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
-            Position = UDim2.new(0.5, 4 + 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
+            Position = UDim2.new(0.5, 4, 0, 10);
+            Size = UDim2.new(0.5, -12, 0, 507 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -3113,7 +3251,7 @@ function Jqz:CreateWindow(...)
         });
 
         Jqz:Create('UIListLayout', {
-            Padding = UDim.new(0, 8);
+            Padding = UDim.new(0, 12);
             FillDirection = Enum.FillDirection.Vertical;
             SortOrder = Enum.SortOrder.LayoutOrder;
             HorizontalAlignment = Enum.HorizontalAlignment.Center;
@@ -3121,7 +3259,7 @@ function Jqz:CreateWindow(...)
         });
 
         Jqz:Create('UIListLayout', {
-            Padding = UDim.new(0, 8);
+            Padding = UDim.new(0, 12);
             FillDirection = Enum.FillDirection.Vertical;
             SortOrder = Enum.SortOrder.LayoutOrder;
             HorizontalAlignment = Enum.HorizontalAlignment.Center;
@@ -3139,7 +3277,7 @@ function Jqz:CreateWindow(...)
                 Tab:HideTab();
             end;
 
-            Blocker.BackgroundTransparency = 0;
+            Blocker.BackgroundTransparency = Jqz.PanelTransparency;
             TabButton.BackgroundColor3 = Jqz.MainColor;
             Jqz.RegistryMap[TabButton].Properties.BackgroundColor3 = 'MainColor';
             TabFrame.Visible = true;
@@ -3164,6 +3302,7 @@ function Jqz:CreateWindow(...)
                 BackgroundColor3 = Jqz.BackgroundColor;
                 BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset;
+                BackgroundTransparency = Jqz.BoxTransparency;
                 Size = UDim2.new(1, 0, 0, 507 + 2);
                 ZIndex = 2;
                 Parent = Info.Side == 1 and LeftSide or RightSide;
@@ -3175,17 +3314,15 @@ function Jqz:CreateWindow(...)
             });
 
             local BoxInner = Jqz:Create('Frame', {
-                BackgroundColor3 = Jqz.BackgroundColor;
-                BorderColor3 = Color3.new(0, 0, 0);
-                Size = UDim2.new(1, -2, 1, -2);
-                Position = UDim2.new(0, 1, 0, 1);
+                BackgroundTransparency = 1;
+                BorderSizePixel = 0;
+                Size = UDim2.new(1, -4, 1, -4);
+                Position = UDim2.new(0, 2, 0, 2);
                 ZIndex = 4;
                 Parent = BoxOuter;
             });
 
-            Jqz:AddToRegistry(BoxInner, {
-                BackgroundColor3 = 'BackgroundColor';
-            });
+            Jqz:Stroke(BoxInner, 'Black');
 
             local Highlight = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.AccentColor;
@@ -3201,7 +3338,7 @@ function Jqz:CreateWindow(...)
 
             local GroupboxLabel = Jqz:CreateLabel({
                 Size = UDim2.new(1, 0, 0, 18);
-                Position = UDim2.new(0, 4, 0, 2);
+                Position = UDim2.new(0, 6, 0, 4);
                 TextSize = 14;
                 Text = Info.Name;
                 TextXAlignment = Enum.TextXAlignment.Left;
@@ -3211,8 +3348,8 @@ function Jqz:CreateWindow(...)
 
             local Container = Jqz:Create('Frame', {
                 BackgroundTransparency = 1;
-                Position = UDim2.new(0, 4, 0, 20);
-                Size = UDim2.new(1, -4, 1, -20);
+                Position = UDim2.new(0, 6, 0, 24);
+                Size = UDim2.new(1, -6, 1, -24);
                 ZIndex = 1;
                 Parent = BoxInner;
             });
@@ -3232,7 +3369,7 @@ function Jqz:CreateWindow(...)
                     end;
                 end;
 
-                BoxOuter.Size = UDim2.new(1, 0, 0, 20 + Size + 2 + 2);
+                BoxOuter.Size = UDim2.new(1, 0, 0, 24 + Size + 6);
             end;
 
             Groupbox.Container = Container;
@@ -3263,6 +3400,7 @@ function Jqz:CreateWindow(...)
                 BackgroundColor3 = Jqz.BackgroundColor;
                 BorderColor3 = Jqz.OutlineColor;
                 BorderMode = Enum.BorderMode.Inset;
+                BackgroundTransparency = Jqz.BoxTransparency;
                 Size = UDim2.new(1, 0, 0, 0);
                 ZIndex = 2;
                 Parent = Info.Side == 1 and LeftSide or RightSide;
@@ -3274,17 +3412,15 @@ function Jqz:CreateWindow(...)
             });
 
             local BoxInner = Jqz:Create('Frame', {
-                BackgroundColor3 = Jqz.BackgroundColor;
-                BorderColor3 = Color3.new(0, 0, 0);
-                Size = UDim2.new(1, -2, 1, -2);
-                Position = UDim2.new(0, 1, 0, 1);
+                BackgroundTransparency = 1;
+                BorderSizePixel = 0;
+                Size = UDim2.new(1, -4, 1, -4);
+                Position = UDim2.new(0, 2, 0, 2);
                 ZIndex = 4;
                 Parent = BoxOuter;
             });
 
-            Jqz:AddToRegistry(BoxInner, {
-                BackgroundColor3 = 'BackgroundColor';
-            });
+            Jqz:Stroke(BoxInner, 'Black');
 
             local Highlight = Jqz:Create('Frame', {
                 BackgroundColor3 = Jqz.AccentColor;
@@ -3300,8 +3436,8 @@ function Jqz:CreateWindow(...)
 
             local TabboxButtons = Jqz:Create('Frame', {
                 BackgroundTransparency = 1;
-                Position = UDim2.new(0, 0, 0, 1);
-                Size = UDim2.new(1, 0, 0, 18);
+                Position = UDim2.new(0, 0, 0, 2);
+                Size = UDim2.new(1, 0, 0, 20);
                 ZIndex = 5;
                 Parent = BoxInner;
             });
@@ -3353,8 +3489,8 @@ function Jqz:CreateWindow(...)
 
                 local Container = Jqz:Create('Frame', {
                     BackgroundTransparency = 1;
-                    Position = UDim2.new(0, 4, 0, 20);
-                    Size = UDim2.new(1, -4, 1, -20);
+                    Position = UDim2.new(0, 6, 0, 26);
+                    Size = UDim2.new(1, -6, 1, -26);
                     ZIndex = 1;
                     Visible = false;
                     Parent = BoxInner;
@@ -3413,7 +3549,7 @@ function Jqz:CreateWindow(...)
                         end;
                     end;
 
-                    BoxOuter.Size = UDim2.new(1, 0, 0, 20 + Size + 2 + 2);
+                    BoxOuter.Size = UDim2.new(1, 0, 0, 26 + Size + 6);
                 end;
 
                 Button.InputBegan:Connect(function(Input)
@@ -3431,7 +3567,6 @@ function Jqz:CreateWindow(...)
                 Tab:AddBlank(3);
                 Tab:Resize();
 
-                -- Show first tab (number is 2 cus of the UIListLayout that also sits in that instance)
                 if #TabboxButtons:GetChildren() == 2 then
                     Tab:Show();
                 end;
@@ -3458,7 +3593,6 @@ function Jqz:CreateWindow(...)
             end;
         end);
 
-        -- This was the first tab added, so we show it by default.
         if #TabContainer:GetChildren() == 1 then
             Tab:ShowTab();
         end;
@@ -3491,7 +3625,6 @@ function Jqz:CreateWindow(...)
         ModalElement.Modal = Toggled;
 
         if Toggled then
-            -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
             Outer.Visible = true;
 
             task.spawn(function()
